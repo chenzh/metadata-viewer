@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MetaData Viewer - 元数据查看器</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        
+        .upload-area {
+            background: white;
+            border-radius: 20px;
+            padding: 60px 40px;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            border: 3px dashed #ddd;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .upload-area:hover, .upload-area.dragover {
+            border-color: #667eea;
+            background: #f8f9ff;
+        }
+        
+        .upload-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+        }
+        
+        .upload-text {
+            font-size: 1.3rem;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .upload-hint {
+            color: #888;
+            font-size: 0.95rem;
+        }
+        
+        .file-input {
+            display: none;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-top: 20px;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+        }
+        
+        .preview-section {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            margin-top: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            display: none;
+        }
+        
+        .preview-section.active {
+            display: block;
+        }
+        
+        .preview-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        
+        .preview-title {
+            font-size: 1.3rem;
+            color: #333;
+        }
+        
+        .file-info {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .file-preview {
+            flex: 0 0 200px;
+            border-radius: 10px;
+            overflow: hidden;
+            background: #f5f5f5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 150px;
+        }
+        
+        .file-preview img {
+            max-width: 100%;
+            max-height: 200px;
+            object-fit: contain;
+        }
+        
+        .file-preview .file-icon {
+            font-size: 4rem;
+        }
+        
+        .file-details {
+            flex: 1;
+        }
+        
+        .detail-item {
+            display: flex;
+            padding: 8px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .detail-label {
+            font-weight: 600;
+            color: #667eea;
+            min-width: 150px;
+        }
+        
+        .detail-value {
+            color: #333;
+            word-break: break-all;
+        }
+        
+        .metadata-section {
+            margin-top: 20px;
+        }
+        
+        .metadata-title {
+            font-size: 1.1rem;
+            color: #333;
+            margin-bottom: 15px;
+            padding: 10px 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 10px;
+        }
+        
+        .metadata-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #f8f9ff;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        .metadata-table th,
+        .metadata-table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .metadata-table th {
+            background: #667eea;
+            color: white;
+            font-weight: 600;
+        }
+        
+        .metadata-table tr:hover {
+            background: #f0f0f0;
+        }
+        
+        .metadata-table td:first-child {
+            font-weight: 600;
+            color: #667eea;
+            width: 40%;
+        }
+        
+        .no-metadata {
+            text-align: center;
+            padding: 40px;
+            color: #888;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px;
+        }
+        
+        .loading.active {
+            display: block;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .clear-btn {
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+        
+        .clear-btn:hover {
+            background: #ff5252;
+        }
+        
+        .gps-map {
+            width: 100%;
+            height: 300px;
+            border-radius: 10px;
+            margin-top: 15px;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📷 MetaData Viewer</h1>
+            <p>在线查看图片、文档、视频等文件的 EXIF 和元数据信息</p>
+        </div>
+        
+        <div class="upload-area" id="uploadArea">
+            <div class="upload-icon">📁</div>
+            <div class="upload-text">拖放文件到这里</div>
+            <div class="upload-hint">或点击选择文件（支持图片、PDF、视频、音频等）</div>
+            <button class="btn">选择文件</button>
+            <input type="file" class="file-input" id="fileInput" accept="*/*">
+        </div>
+        
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>正在解析元数据...</p>
+        </div>
+        
+        <div class="preview-section" id="previewSection">
+            <div class="preview-header">
+                <h3 class="preview-title">📋 文件信息</h3>
+                <button class="clear-btn" onclick="clearAll()">清除</button>
+            </div>
+            
+            <div class="file-info">
+                <div class="file-preview" id="filePreview">
+                    <span class="file-icon">📄</span>
+                </div>
+                <div class="file-details" id="fileDetails"></div>
+            </div>
+            
+            <div class="metadata-section" id="metadataSection"></div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/exifr@7.1.3/dist/full.umd.min.js"></script>
+    <script>
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const loading = document.getElementById('loading');
+        const previewSection = document.getElementById('previewSection');
+        const filePreview = document.getElementById('filePreview');
+        const fileDetails = document.getElementById('fileDetails');
+        const metadataSection = document.getElementById('metadataSection');
+
+        // 点击上传区域触发文件选择
+        uploadArea.addEventListener('click', (e) => {
+            if (e.target !== fileInput) {
+                fileInput.click();
+            }
+        });
+
+        // 文件选择事件
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFile(e.target.files[0]);
+            }
+        });
+
+        // 拖放事件
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            if (e.dataTransfer.files.length > 0) {
+                handleFile(e.dataTransfer.files[0]);
+            }
+        });
+
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function formatDate(date) {
+            if (!date) return 'N/A';
+            return new Date(date).toLocaleString('zh-CN');
+        }
+
+        async function handleFile(file) {
+            // 显示加载状态
+            loading.classList.add('active');
+            previewSection.classList.remove('active');
+
+            try {
+                // 显示文件预览
+                await showFilePreview(file);
+                
+                // 显示基本文件信息
+                showFileInfo(file);
+                
+                // 解析元数据
+                await parseMetadata(file);
+                
+                // 显示结果
+                loading.classList.remove('active');
+                previewSection.classList.add('active');
+                
+                // 滚动到结果区域
+                previewSection.scrollIntoView({ behavior: 'smooth' });
+            } catch (error) {
+                console.error('Error:', error);
+                loading.classList.remove('active');
+                alert('解析文件时出错: ' + error.message);
+            }
+        }
+
+        async function showFilePreview(file) {
+            const type = file.type;
+            
+            if (type.startsWith('image/')) {
+                // 图片预览
+                const img = document.createElement('img');
+                img.src = URL.createObjectURL(file);
+                img.onload = () => URL.revokeObjectURL(img.src);
+                filePreview.innerHTML = '';
+                filePreview.appendChild(img);
+            } else if (type.startsWith('video/')) {
+                filePreview.innerHTML = '<span class="file-icon">🎬</span>';
+            } else if (type.startsWith('audio/')) {
+                filePreview.innerHTML = '<span class="file-icon">🎵</span>';
+            } else if (type.includes('pdf')) {
+                filePreview.innerHTML = '<span class="file-icon">📕</span>';
+            } else {
+                filePreview.innerHTML = '<span class="file-icon">📄</span>';
+            }
+        }
+
+        function showFileInfo(file) {
+            const details = [
+                { label: '文件名', value: file.name },
+                { label: '文件类型', value: file.type || 'Unknown' },
+                { label: '文件大小', value: formatBytes(file.size) },
+                { label: '最后修改', value: formatDate(file.lastModified) }
+            ];
+
+            fileDetails.innerHTML = details.map(d => `
+                <div class="detail-item">
+                    <span class="detail-label">${d.label}:</span>
+                    <span class="detail-value">${d.value}</span>
+                </div>
+            `).join('');
+        }
+
+        async function parseMetadata(file) {
+            metadataSection.innerHTML = '';
+            const type = file.type;
+
+            if (type.startsWith('image/')) {
+                await parseImageMetadata(file);
+            } else if (type.startsWith('video/')) {
+                await parseVideoMetadata(file);
+            } else if (type.startsWith('audio/')) {
+                await parseAudioMetadata(file);
+            } else {
+                // 通用文件信息
+                showGenericMetadata(file);
+            }
+        }
+
+        async function parseImageMetadata(file) {
+            try {
+                const exif = await exifr.parse(file, {
+                    exif: true,
+                    gps: true,
+                    iptc: true,
+                    icc: true
+                });
+
+                if (!exif) {
+                    metadataSection.innerHTML = '<div class="no-metadata">没有找到 EXIF 元数据</div>';
+                    return;
+                }
+
+                // 相机信息
+                const cameraInfo = {
+                    '相机品牌': exif.Make,
+                    '相机型号': exif.Model,
+                    '镜头型号': exif.LensModel,
+                    '软件': exif.Software
+                };
+                
+                if (Object.values(cameraInfo).some(v => v)) {
+                    addMetadataSection('📷 相机信息', cameraInfo);
+                }
+
+                // 拍摄参数
+                const photoParams = {
+                    '曝光时间': exif.ExposureTime ? `1/${Math.round(1/exif.ExposureTime)}s` : null,
+                    '光圈': exif.FNumber ? `f/${exif.FNumber}` : null,
+                    'ISO': exif.ISO,
+                    '焦距': exif.FocalLength ? `${exif.FocalLength}mm` : null,
+                    '35mm等效焦距': exif.FocalLengthIn35mmFormat ? `${exif.FocalLengthIn35mmFormat}mm` : null,
+                    '闪光灯': exif.Flash,
+                    '白平衡': exif.WhiteBalance,
+                    '测光模式': exif.MeteringMode,
+                    '曝光程序': exif.ExposureProgram
+                };
+                
+                if (Object.values(photoParams).some(v => v)) {
+                    addMetadataSection('⚙️ 拍摄参数', photoParams);
+                }
+
+                // 图片尺寸
+                const imageInfo = {
+                    '宽度': exif.ImageWidth || exif.ExifImageWidth,
+                    '高度': exif.ImageHeight || exif.ExifImageHeight,
+                    '分辨率X': exif.XResolution,
+                    '分辨率Y': exif.YResolution,
+                    '色彩空间': exif.ColorSpace
+                };
+                
+                if (Object.values(imageInfo).some(v => v)) {
+                    addMetadataSection('🖼️ 图片信息', imageInfo);
+                }
+
+                // 时间信息
+                const timeInfo = {
+                    '拍摄时间': exif.DateTimeOriginal,
+                    '数字化时间': exif.CreateDate,
+                    '修改时间': exif.ModifyDate
+                };
+                
+                if (Object.values(timeInfo).some(v => v)) {
+                    addMetadataSection('📅 时间信息', timeInfo);
+                }
+
+                // GPS 信息
+                if (exif.latitude && exif.longitude) {
+                    const gpsInfo = {
+                        '纬度': exif.latitude,
+                        '经度': exif.longitude,
+                        '海拔': exif.altitude ? `${exif.altitude}m` : null,
+                        '定位时间': exif.GPSDateStamp
+                    };
+                    addMetadataSection('📍 GPS 位置', gpsInfo);
+                    
+                    // 添加地图
+                    const mapUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${exif.longitude-0.01},${exif.latitude-0.01},${exif.longitude+0.01},${exif.latitude+0.01}&layer=mapnik&marker=${exif.latitude},${exif.longitude}`;
+                    metadataSection.innerHTML += `<iframe class="gps-map" src="${mapUrl}"></iframe>`;
+                }
+
+                // 原始 EXIF 数据（可折叠）
+                addRawMetadataSection('🔍 完整 EXIF 数据', exif);
+
+            } catch (error) {
+                console.error('EXIF parse error:', error);
+                metadataSection.innerHTML = '<div class="no-metadata">解析 EXIF 数据失败</div>';
+            }
+        }
+
+        async function parseVideoMetadata(file) {
+            return new Promise((resolve) => {
+                const video = document.createElement('video');
+                video.preload = 'metadata';
+                
+                video.onloadedmetadata = () => {
+                    const videoInfo = {
+                        '时长': `${Math.round(video.duration)} 秒`,
+                        '宽度': video.videoWidth,
+                        '高度': video.videoHeight,
+                        '宽高比': (video.videoWidth / video.videoHeight).toFixed(2)
+                    };
+                    addMetadataSection('🎬 视频信息', videoInfo);
+                    
+                    URL.revokeObjectURL(video.src);
+                    resolve();
+                };
+                
+                video.onerror = () => {
+                    metadataSection.innerHTML = '<div class="no-metadata">无法解析视频元数据</div>';
+                    resolve();
+                };
+                
+                video.src = URL.createObjectURL(file);
+            });
+        }
+
+        async function parseAudioMetadata(file) {
+            return new Promise((resolve) => {
+                const audio = document.createElement('audio');
+                audio.preload = 'metadata';
+                
+                audio.onloadedmetadata = () => {
+                    const audioInfo = {
+                        '时长': `${Math.round(audio.duration)} 秒`,
+                        '采样率': audio.sampleRate ? `${audio.sampleRate} Hz` : 'N/A',
+                        '声道数': audio.channelCount || 'N/A'
+                    };
+                    addMetadataSection('🎵 音频信息', audioInfo);
+                    
+                    URL.revokeObjectURL(audio.src);
+                    resolve();
+                };
+                
+                audio.onerror = () => {
+                    metadataSection.innerHTML = '<div class="no-metadata">无法解析音频元数据</div>';
+                    resolve();
+                };
+                
+                audio.src = URL.createObjectURL(file);
+            });
+        }
+
+        function showGenericMetadata(file) {
+            metadataSection.innerHTML = '<div class="no-metadata">此文件类型暂不支持深度元数据解析</div>';
+        }
+
+        function addMetadataSection(title, data) {
+            const filtered = Object.entries(data).filter(([_, v]) => v !== null && v !== undefined);
+            if (filtered.length === 0) return;
+
+            const html = `
+                <div class="metadata-section">
+                    <h4 class="metadata-title">${title}</h4>
+                    <table class="metadata-table">
+                        ${filtered.map(([key, value]) => `
+                            <tr>
+                                <td>${key}</td>
+                                <td>${formatValue(value)}</td>
+                            </tr>
+                        `).join('')}
+                    </table>
+                </div>
+            `;
+            metadataSection.innerHTML += html;
+        }
+
+        function addRawMetadataSection(title, data) {
+            const html = `
+                <div class="metadata-section">
+                    <h4 class="metadata-title">${title}</h4>
+                    <details>
+                        <summary style="cursor: pointer; padding: 10px; background: #f0f0f0; border-radius: 5px;">点击查看原始数据</summary>
+                        <pre style="background: #f8f9ff; padding: 15px; border-radius: 10px; overflow-x: auto; font-size: 0.85rem; margin-top: 10px;">${JSON.stringify(data, null, 2)}</pre>
+                    </details>
+                </div>
+            `;
+            metadataSection.innerHTML += html;
+        }
+
+        function formatValue(value) {
+            if (value instanceof Date) {
+                return formatDate(value);
+            }
+            if (typeof value === 'object') {
+                return JSON.stringify(value);
+            }
+            return String(value);
+        }
+
+        function clearAll() {
+            fileInput.value = '';
+            previewSection.classList.remove('active');
+            metadataSection.innerHTML = '';
+            fileDetails.innerHTML = '';
+            filePreview.innerHTML = '<span class="file-icon">📄</span>';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    </script>
+</body>
+</html>
