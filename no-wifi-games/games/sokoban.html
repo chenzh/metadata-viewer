@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>推箱子</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #1a1a2e;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+      min-height: 100vh;
+      color: white;
+    }
+    h1 { font-size: 1.5rem; margin-bottom: 5px; }
+    .level-info { color: #888; margin-bottom: 10px; }
+    .game-board {
+      display: grid;
+      gap: 1px;
+      background: #333;
+      padding: 5px;
+      border-radius: 5px;
+    }
+    .cell {
+      width: 40px; height: 40px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.5rem;
+      background: #2a2a4e;
+    }
+    .cell.wall { background: #5d4037; }
+    .cell.target { background: #4a4a6e; }
+    .cell.player { background: #4CAF50; border-radius: 50%; }
+    .cell.box { background: #ff9800; border-radius: 4px; }
+    .cell.boxOnTarget { background: #8bc34a; border-radius: 4px; }
+    .controls {
+      display: grid;
+      grid-template-columns: repeat(3, 60px);
+      gap: 5px;
+      margin-top: 15px;
+    }
+    .controls button {
+      width: 60px; height: 50px;
+      background: #333; color: white;
+      border: none; border-radius: 8px;
+      font-size: 1.2rem; cursor: pointer;
+    }
+    .controls button:active { background: #555; }
+    .btn-row { display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap; justify-content: center; }
+    .btn { padding: 10px 15px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer; }
+    .btn:hover { background: #45a049; }
+    .btn.secondary { background: #2196F3; }
+    .steps { margin-top: 10px; }
+    .back-link { margin-top: 15px; color: #888; text-decoration: none; }
+    @media (max-width: 400px) { .cell { width: 35px; height: 35px; font-size: 1.2rem; } }
+  </style>
+</head>
+<body>
+  <h1>📦 推箱子</h1>
+  <p class="level-info">关卡 <span id="levelNum">1</span></p>
+  <div class="game-board" id="board"></div>
+  <p class="steps">步数: <span id="steps">0</span> | 推箱: <span id="pushes">0</span></p>
+  <div class="controls">
+    <button style="grid-column: 2;" onclick="move(0, -1)">↑</button>
+    <button onclick="move(-1, 0)">←</button>
+    <button onclick="move(0, 1)">↓</button>
+    <button onclick="move(1, 0)">→</button>
+  </div>
+  <div class="btn-row">
+    <button class="btn" onclick="resetLevel()">重置</button>
+    <button class="btn secondary" onclick="prevLevel()">上一关</button>
+    <button class="btn secondary" onclick="nextLevel()">下一关</button>
+  </div>
+  <a href="index.html" class="back-link">← 返回游戏列表</a>
+
+  <script>
+    const levels = [
+      {
+        w: 8, h: 8,
+        map: [
+          "########",
+          "#......#",
+          "#.@....#",
+          "#...$..#",
+          "#......#",
+          "#...*..#",
+          "#......#",
+          "########"
+        ]
+      },
+      {
+        w: 9, h: 9,
+        map: [
+          "#########",
+          "#.......#",
+          "#.@.....#",
+          "#...$...#",
+          "#.......#",
+          "#...*...#",
+          "#...$...#",
+          "#...*...#",
+          "#########"
+        ]
+      },
+      {
+        w: 10, h: 9,
+        map: [
+          "##########",
+          "#........#",
+          "#.@......#",
+          "#...$....#",
+          "#...$....#",
+          "#...$....#",
+          "#.*.*.*..#",
+          "#........#",
+          "##########"
+        ]
+      }
+    ];
+
+    let currentLevel = 0, board = [], player = { x: 0, y: 0 }, steps = 0, pushes = 0;
+    const EMPTY = 0, WALL = 1, TARGET = 2, BOX = 4, PLAYER = 8;
+
+    function parseLevel(level) {
+      const h = level.h, w = level.w;
+      board = Array(h).fill(null).map(() => Array(w).fill(EMPTY));
+      for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+          const c = level.map[y][x];
+          if (c === '#') board[y][x] = WALL;
+          else if (c === '*') board[y][x] = TARGET;
+          else if (c === '@') { player = { x, y }; board[y][x] = PLAYER; }
+          else if (c === '$') board[y][x] = BOX;
+          else if (c === '.') board[y][x] = TARGET;
+        }
+      }
+    }
+
+    function render() {
+      const container = document.getElementById('board');
+      container.innerHTML = '';
+      const level = levels[currentLevel];
+      container.style.gridTemplateColumns = `repeat(${level.w}, 1fr)`;
+      
+      for (let y = 0; y < level.h; y++) {
+        for (let x = 0; x < level.w; x++) {
+          const cell = document.createElement('div');
+          cell.className = 'cell';
+          const val = board[y][x];
+          if (val & WALL) { cell.classList.add('wall'); cell.textContent = ''; }
+          else if (val & BOX) {
+            if (val & TARGET) { cell.classList.add('boxOnTarget'); cell.textContent = '✓'; }
+            else { cell.classList.add('box'); cell.textContent = '📦'; }
+          }
+          else if (x === player.x && y === player.y) { cell.classList.add('player'); cell.textContent = '😊'; }
+          else if (val & TARGET) { cell.classList.add('target'); cell.textContent = '◉'; }
+          container.appendChild(cell);
+        }
+      }
+      document.getElementById('levelNum').textContent = currentLevel + 1;
+      document.getElementById('steps').textContent = steps;
+      document.getElementById('pushes').textContent = pushes;
+    }
+
+    function move(dx, dy) {
+      const nx = player.x + dx, ny = player.y + dy;
+      if (nx < 0 || nx >= board[0].length || ny < 0 || ny >= board.length) return;
+      if (board[ny][nx] & WALL) return;
+      
+      if (board[ny][nx] & BOX) {
+        const bx = nx + dx, by = ny + dy;
+        if (bx < 0 || bx >= board[0].length || by < 0 || by >= board.length) return;
+        if (board[by][bx] & (WALL | BOX)) return;
+        
+        board[by][bx] |= BOX;
+        board[ny][nx] &= ~BOX;
+        pushes++;
+      }
+      
+      player.x = nx;
+      player.y = ny;
+      steps++;
+      render();
+      checkWin();
+    }
+
+    function checkWin() {
+      let boxesOnTarget = 0, totalTargets = 0;
+      for (let y = 0; y < board.length; y++) {
+        for (let x = 0; x < board[0].length; x++) {
+          if (board[y][x] & TARGET) {
+            totalTargets++;
+            if (board[y][x] & BOX) boxesOnTarget++;
+          }
+        }
+      }
+      if (boxesOnTarget === totalTargets) {
+        setTimeout(() => {
+          alert(`🎉 关卡 ${currentLevel + 1} 完成！\n步数: ${steps}\n推箱: ${pushes}`);
+          if (currentLevel < levels.length - 1) nextLevel();
+        }, 100);
+      }
+    }
+
+    function resetLevel() { steps = 0; pushes = 0; parseLevel(levels[currentLevel]); render(); }
+    function nextLevel() { if (currentLevel < levels.length - 1) { currentLevel++; resetLevel(); } }
+    function prevLevel() { if (currentLevel > 0) { currentLevel--; resetLevel(); } }
+
+    document.addEventListener('keydown', e => {
+      switch(e.key) {
+        case 'ArrowUp': case 'w': e.preventDefault(); move(0, -1); break;
+        case 'ArrowDown': case 's': e.preventDefault(); move(0, 1); break;
+        case 'ArrowLeft': case 'a': e.preventDefault(); move(-1, 0); break;
+        case 'ArrowRight': case 'd': e.preventDefault(); move(1, 0); break;
+      }
+    });
+
+    resetLevel();
+  </script>
+</body>
+</html>

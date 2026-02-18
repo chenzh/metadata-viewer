@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>华容道</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #1a1a2e;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+      min-height: 100vh;
+      color: white;
+    }
+    h1 { font-size: 1.5rem; margin-bottom: 10px; }
+    .info { color: #888; margin-bottom: 10px; }
+    .game-board {
+      width: 300px; height: 360px;
+      background: #5d4037;
+      border: 5px solid #3e2723;
+      position: relative;
+      border-radius: 5px;
+    }
+    .exit {
+      position: absolute;
+      top: -5px; left: 100px;
+      width: 100px; height: 5px;
+      background: #ffeb3b;
+    }
+    .piece {
+      position: absolute;
+      background: #8d6e63;
+      border: 2px solid #5d4037;
+      border-radius: 4px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: bold;
+      transition: all 0.1s;
+      user-select: none;
+    }
+    .piece:hover { filter: brightness(1.1); }
+    .piece.cao { background: #ef5350; font-size: 1.2rem; }
+    .piece.guan { background: #66bb6a; }
+    .piece.zhang { background: #42a5f5; }
+    .piece.zhao { background: #ab47bc; }
+    .piece.ma { background: #ffa726; }
+    .piece.huang { background: #26c6da; }
+    .piece.soldier { background: #bdbdbd; font-size: 0.8rem; }
+    .controls { display: flex; gap: 10px; margin-top: 15px; }
+    .btn { padding: 10px 20px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer; }
+    .btn:hover { background: #45a049; }
+    .btn.secondary { background: #2196F3; }
+    .steps { margin-top: 10px; font-size: 1.2rem; }
+    .back-link { margin-top: 15px; color: #888; text-decoration: none; }
+    @media (max-width: 350px) {
+      .game-board { width: 280px; height: 336px; }
+      .piece { font-size: 0.9rem; }
+    }
+  </style>
+</head>
+<body>
+  <h1>🏯 华容道</h1>
+  <p class="info">将曹操（红色大方块）移动到出口</p>
+  <div class="game-board" id="board">
+    <div class="exit"></div>
+  </div>
+  <p class="steps">步数: <span id="steps">0</span></p>
+  <div class="controls">
+    <button class="btn" onclick="initGame()">新游戏</button>
+    <button class="btn secondary" onclick="changeLevel()">切换关卡</button>
+  </div>
+  <a href="index.html" class="back-link">← 返回游戏列表</a>
+
+  <script>
+    const BOARD_W = 4, BOARD_H = 5, CELL_SIZE = 75;
+    let pieces = [], selectedPiece = null, steps = 0, currentLevel = 0;
+    
+    const levels = [
+      // 横刀立马
+      [
+        { name: '曹操', type: 'cao', x: 1, y: 0, w: 2, h: 2 },
+        { name: '关羽', type: 'guan', x: 1, y: 2, w: 2, h: 1 },
+        { name: '张飞', type: 'zhang', x: 0, y: 0, w: 1, h: 2 },
+        { name: '赵云', type: 'zhao', x: 3, y: 0, w: 1, h: 2 },
+        { name: '马超', type: 'ma', x: 0, y: 2, w: 1, h: 2 },
+        { name: '黄忠', type: 'huang', x: 3, y: 2, w: 1, h: 2 },
+        { name: '兵1', type: 'soldier', x: 0, y: 4, w: 1, h: 1 },
+        { name: '兵2', type: 'soldier', x: 1, y: 3, w: 1, h: 1 },
+        { name: '兵3', type: 'soldier', x: 2, y: 3, w: 1, h: 1 },
+        { name: '兵4', type: 'soldier', x: 3, y: 4, w: 1, h: 1 }
+      ],
+      // 层层设防
+      [
+        { name: '曹操', type: 'cao', x: 1, y: 2, w: 2, h: 2 },
+        { name: '关羽', type: 'guan', x: 1, y: 0, w: 2, h: 1 },
+        { name: '张飞', type: 'zhang', x: 0, y: 0, w: 1, h: 2 },
+        { name: '赵云', type: 'zhao', x: 3, y: 0, w: 1, h: 2 },
+        { name: '马超', type: 'ma', x: 0, y: 3, w: 1, h: 2 },
+        { name: '黄忠', type: 'huang', x: 3, y: 3, w: 1, h: 2 },
+        { name: '兵1', type: 'soldier', x: 0, y: 2, w: 1, h: 1 },
+        { name: '兵2', type: 'soldier', x: 1, y: 1, w: 1, h: 1 },
+        { name: '兵3', type: 'soldier', x: 2, y: 1, w: 1, h: 1 },
+        { name: '兵4', type: 'soldier', x: 3, y: 2, w: 1, h: 1 }
+      ]
+    ];
+
+    function render() {
+      const board = document.getElementById('board');
+      board.innerHTML = '<div class="exit"></div>';
+      pieces.forEach((p, i) => {
+        const el = document.createElement('div');
+        el.className = `piece ${p.type}`;
+        el.style.left = p.x * CELL_SIZE + 'px';
+        el.style.top = p.y * CELL_SIZE + 'px';
+        el.style.width = p.w * CELL_SIZE - 2 + 'px';
+        el.style.height = p.h * CELL_SIZE - 2 + 'px';
+        el.textContent = p.name;
+        el.onmousedown = el.ontouchstart = (e) => startDrag(e, i);
+        board.appendChild(el);
+      });
+      document.getElementById('steps').textContent = steps;
+    }
+
+    function startDrag(e, index) {
+      e.preventDefault();
+      selectedPiece = index;
+      const p = pieces[index];
+      const startX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+      const startY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
+      
+      function onMove(e) {
+        const x = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+        const y = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
+        const dx = x - startX, dy = y - startY;
+        if (Math.abs(dx) > 30 || Math.abs(dy) > 30) {
+          if (Math.abs(dx) > Math.abs(dy)) {
+            move(p, dx > 0 ? 1 : -1, 0);
+          } else {
+            move(p, 0, dy > 0 ? 1 : -1);
+          }
+          cleanup();
+        }
+      }
+      
+      function onEnd() { cleanup(); }
+      function cleanup() {
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onEnd);
+        document.removeEventListener('touchmove', onMove);
+        document.removeEventListener('touchend', onEnd);
+      }
+      
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onEnd);
+      document.addEventListener('touchmove', onMove);
+      document.addEventListener('touchend', onEnd);
+    }
+
+    function move(piece, dx, dy) {
+      const newX = piece.x + dx, newY = piece.y + dy;
+      if (newX < 0 || newX + piece.w > BOARD_W || newY < 0 || newY + piece.h > BOARD_H) return;
+      
+      // Check collision
+      for (const p of pieces) {
+        if (p === piece) continue;
+        if (newX < p.x + p.w && newX + piece.w > p.x &&
+            newY < p.y + p.h && newY + piece.h > p.y) return;
+      }
+      
+      piece.x = newX;
+      piece.y = newY;
+      steps++;
+      render();
+      checkWin();
+    }
+
+    function checkWin() {
+      const cao = pieces.find(p => p.type === 'cao');
+      if (cao.x === 1 && cao.y === 3) {
+        setTimeout(() => alert(`🎉 恭喜！曹操成功逃脱！\n用时 ${steps} 步`), 100);
+      }
+    }
+
+    function initGame() {
+      steps = 0;
+      pieces = levels[currentLevel].map(p => ({...p}));
+      render();
+    }
+
+    function changeLevel() {
+      currentLevel = (currentLevel + 1) % levels.length;
+      initGame();
+    }
+
+    // Keyboard control
+    document.addEventListener('keydown', e => {
+      if (selectedPiece === null) return;
+      const p = pieces[selectedPiece];
+      switch(e.key) {
+        case 'ArrowUp': e.preventDefault(); move(p, 0, -1); break;
+        case 'ArrowDown': e.preventDefault(); move(p, 0, 1); break;
+        case 'ArrowLeft': e.preventDefault(); move(p, -1, 0); break;
+        case 'ArrowRight': e.preventDefault(); move(p, 1, 0); break;
+      }
+    });
+
+    initGame();
+  </script>
+</body>
+</html>

@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>黑白棋</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #1a1a2e;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+      min-height: 100vh;
+      color: white;
+    }
+    h1 { font-size: 1.5rem; margin-bottom: 10px; }
+    .score { display: flex; gap: 30px; margin-bottom: 15px; }
+    .score span { display: flex; align-items: center; gap: 8px; }
+    .disc { width: 20px; height: 20px; border-radius: 50%; border: 1px solid #666; }
+    .disc.black { background: radial-gradient(circle at 30% 30%, #666, #000); }
+    .disc.white { background: radial-gradient(circle at 30% 30%, #fff, #ccc); }
+    .board {
+      display: grid;
+      grid-template-columns: repeat(8, 45px);
+      gap: 2px;
+      background: #2e7d32;
+      padding: 5px;
+      border-radius: 5px;
+      border: 3px solid #1b5e20;
+    }
+    .cell {
+      width: 45px; height: 45px;
+      background: #4caf50;
+      border-radius: 3px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .cell:hover:not(.black):not(.white) { background: #66bb6a; }
+    .cell.valid { background: #81c784; box-shadow: inset 0 0 5px rgba(255,255,255,0.5); }
+    .cell.black::after, .cell.white::after {
+      content: '';
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      border: 1px solid #333;
+    }
+    .cell.black::after { background: radial-gradient(circle at 30% 30%, #666, #000); }
+    .cell.white::after { background: radial-gradient(circle at 30% 30%, #fff, #ccc); border-color: #999; }
+    .cell.last { box-shadow: 0 0 8px #ffeb3b; }
+    .controls { display: flex; gap: 10px; margin-top: 15px; }
+    .btn { padding: 10px 20px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer; }
+    .btn:hover { background: #45a049; }
+    .back-link { margin-top: 15px; color: #888; text-decoration: none; }
+    @media (max-width: 400px) {
+      .board { grid-template-columns: repeat(8, 38px); }
+      .cell { width: 38px; height: 38px; }
+      .cell.black::after, .cell.white::after { width: 30px; height: 30px; }
+    }
+  </style>
+</head>
+<body>
+  <h1>⚫ 黑白棋 ⚪</h1>
+  <div class="score">
+    <span><span class="disc black"></span> <strong id="blackCount">2</strong></span>
+    <span id="turn">黑方回合</span>
+    <span><span class="disc white"></span> <strong id="whiteCount">2</strong></span>
+  </div>
+  <div class="board" id="board"></div>
+  <div class="controls">
+    <button class="btn" onclick="initGame()">新游戏</button>
+  </div>
+  <a href="index.html" class="back-link">← 返回游戏列表</a>
+
+  <script>
+    let board = [], current = 'black', lastMove = null, gameOver = false;
+    const DIRS = [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
+
+    function initGame() {
+      board = Array(8).fill(null).map(() => Array(8).fill(null));
+      board[3][3] = board[4][4] = 'white';
+      board[3][4] = board[4][3] = 'black';
+      current = 'black';
+      lastMove = null;
+      gameOver = false;
+      updateStatus();
+      render();
+    }
+
+    function render() {
+      const container = document.getElementById('board');
+      container.innerHTML = '';
+      const validMoves = getValidMoves(current);
+      
+      for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 8; c++) {
+          const cell = document.createElement('div');
+          cell.className = 'cell';
+          if (board[r][c]) cell.classList.add(board[r][c]);
+          if (validMoves.some(m => m.r === r && m.c === c)) cell.classList.add('valid');
+          if (lastMove && lastMove.r === r && lastMove.c === c) cell.classList.add('last');
+          cell.onclick = () => makeMove(r, c);
+          container.appendChild(cell);
+        }
+      }
+    }
+
+    function getValidMoves(player) {
+      const moves = [];
+      for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 8; c++) {
+          if (!board[r][c] && getFlips(r, c, player).length > 0) {
+            moves.push({ r, c });
+          }
+        }
+      }
+      return moves;
+    }
+
+    function getFlips(r, c, player) {
+      const flips = [];
+      const opponent = player === 'black' ? 'white' : 'black';
+      
+      for (const [dr, dc] of DIRS) {
+        const line = [];
+        let nr = r + dr, nc = c + dc;
+        while (nr >= 0 && nr < 8 && nc >= 0 && nc < 8 && board[nr][nc] === opponent) {
+          line.push({ r: nr, c: nc });
+          nr += dr; nc += dc;
+        }
+        if (line.length > 0 && nr >= 0 && nr < 8 && nc >= 0 && nc < 8 && board[nr][nc] === player) {
+          flips.push(...line);
+        }
+      }
+      return flips;
+    }
+
+    function makeMove(r, c) {
+      if (gameOver || board[r][c]) return;
+      const flips = getFlips(r, c, current);
+      if (flips.length === 0) return;
+      
+      board[r][c] = current;
+      flips.forEach(f => board[f.r][f.c] = current);
+      lastMove = { r, c };
+      
+      current = current === 'black' ? 'white' : 'black';
+      if (getValidMoves(current).length === 0) {
+        current = current === 'black' ? 'white' : 'black';
+        if (getValidMoves(current).length === 0) {
+          gameOver = true;
+          endGame();
+        }
+      }
+      
+      updateStatus();
+      render();
+      
+      if (current === 'white' && !gameOver) setTimeout(aiMove, 500);
+    }
+
+    function aiMove() {
+      if (gameOver) return;
+      const moves = getValidMoves('white');
+      if (moves.length === 0) return;
+      
+      // Simple strategy: maximize flips, prefer corners
+      let best = moves[0], maxScore = -1;
+      for (const m of moves) {
+        let score = getFlips(m.r, m.c, 'white').length;
+        if ((m.r === 0 || m.r === 7) && (m.c === 0 || m.c === 7)) score += 10;
+        else if (m.r === 0 || m.r === 7 || m.c === 0 || m.c === 7) score += 3;
+        if (score > maxScore) { maxScore = score; best = m; }
+      }
+      makeMove(best.r, best.c);
+    }
+
+    function updateStatus() {
+      let black = 0, white = 0;
+      for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 8; c++) {
+          if (board[r][c] === 'black') black++;
+          if (board[r][c] === 'white') white++;
+        }
+      }
+      document.getElementById('blackCount').textContent = black;
+      document.getElementById('whiteCount').textContent = white;
+      document.getElementById('turn').textContent = gameOver ? '游戏结束' : (current === 'black' ? '黑方回合' : '白方回合');
+    }
+
+    function endGame() {
+      let black = 0, white = 0;
+      for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) {
+        if (board[r][c] === 'black') black++;
+        if (board[r][c] === 'white') white++;
+      }
+      const winner = black > white ? '⚫ 黑方获胜！' : black < white ? '⚪ 白方获胜！' : '🤝 平局！';
+      setTimeout(() => alert(`${winner}\n黑方: ${black} | 白方: ${white}`), 100);
+    }
+
+    initGame();
+  </script>
+</body>
+</html>
