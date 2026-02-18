@@ -216,11 +216,10 @@ export function Hero({ onSearch }: HeroProps) {
                 gamesSection.scrollIntoView({ behavior: 'smooth' });
               }
             }}
-            className="bg-gradient-to-r from-[#FF3A7A] to-[#A42EFF] hover:from-[#FF5A9A] hover:to-[#C44EFF] text-white border-0 rounded-full px-8 h-14 text-lg group relative overflow-hidden"
+            className="bg-gradient-to-r from-[#FF3A7A] to-[#A42EFF] hover:from-[#FF5A9A] hover:to-[#C44EFF] text-white border-0 rounded-full px-8 h-14 text-lg group"
           >
             <Gamepad2 className="w-5 h-5 mr-2 group-hover:rotate-12 transition-transform" />
-            <span className="relative z-10">开始探索</span>
-            <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
+            开始探索
           </Button>
           <Button
             size="lg"

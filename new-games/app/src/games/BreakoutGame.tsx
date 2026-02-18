@@ -17,37 +17,38 @@ const BRICK_COLORS = ['#FF3A7A', '#A42EFF', '#3B89FF', '#00D4FF', '#4ADE80'];
 
 export function BreakoutGame() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [paddleX, setPaddleX] = useState(CANVAS_WIDTH / 2 - PADDLE_WIDTH / 2);
-  const [ball, setBall] = useState({ x: CANVAS_WIDTH / 2, y: CANVAS_HEIGHT - 50, vx: 4, vy: -4 });
-  const [bricks, setBricks] = useState<boolean[][]>([]);
+  const requestRef = useRef<number | null>(null);
+  const gameStateRef = useRef({
+    paddleX: CANVAS_WIDTH / 2 - PADDLE_WIDTH / 2,
+    ball: { x: CANVAS_WIDTH / 2, y: CANVAS_HEIGHT - 50, vx: 4, vy: -4 },
+    bricks: Array(BRICK_ROWS).fill(null).map(() => Array(BRICK_COLS).fill(true)),
+    keys: { left: false, right: false },
+    score: 0,
+  });
+  
   const [gameOver, setGameOver] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [score, setScore] = useState(0);
   const [won, setWon] = useState(false);
-  const keysRef = useRef({ left: false, right: false });
-
-  const initBricks = useCallback(() => {
-    return Array(BRICK_ROWS).fill(null).map(() => Array(BRICK_COLS).fill(true));
-  }, []);
 
   const resetGame = useCallback(() => {
-    setPaddleX(CANVAS_WIDTH / 2 - PADDLE_WIDTH / 2);
-    setBall({ x: CANVAS_WIDTH / 2, y: CANVAS_HEIGHT - 50, vx: 4, vy: -4 });
-    setBricks(initBricks());
+    gameStateRef.current = {
+      paddleX: CANVAS_WIDTH / 2 - PADDLE_WIDTH / 2,
+      ball: { x: CANVAS_WIDTH / 2, y: CANVAS_HEIGHT - 50, vx: 4, vy: -4 },
+      bricks: Array(BRICK_ROWS).fill(null).map(() => Array(BRICK_COLS).fill(true)),
+      keys: { left: false, right: false },
+      score: 0,
+    };
     setGameOver(false);
     setIsPaused(false);
     setScore(0);
     setWon(false);
-  }, [initBricks]);
-
-  useEffect(() => {
-    setBricks(initBricks());
-  }, [initBricks]);
+  }, []);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowLeft') keysRef.current.left = true;
-      if (e.key === 'ArrowRight') keysRef.current.right = true;
+      if (e.key === 'ArrowLeft') gameStateRef.current.keys.left = true;
+      if (e.key === 'ArrowRight') gameStateRef.current.keys.right = true;
       if (e.key === ' ') {
         e.preventDefault();
         setIsPaused(p => !p);
@@ -55,8 +56,8 @@ export function BreakoutGame() {
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowLeft') keysRef.current.left = false;
-      if (e.key === 'ArrowRight') keysRef.current.right = false;
+      if (e.key === 'ArrowLeft') gameStateRef.current.keys.left = false;
+      if (e.key === 'ArrowRight') gameStateRef.current.keys.right = false;
     };
 
     window.addEventListener('keydown', handleKeyDown);
@@ -68,119 +69,123 @@ export function BreakoutGame() {
   }, []);
 
   useEffect(() => {
-    if (gameOver || won || isPaused) return;
-
-    const interval = setInterval(() => {
-      // Move paddle
-      setPaddleX(x => {
-        let newX = x;
-        if (keysRef.current.left) newX -= 8;
-        if (keysRef.current.right) newX += 8;
-        return Math.max(0, Math.min(CANVAS_WIDTH - PADDLE_WIDTH, newX));
-      });
-
-      // Move ball
-      setBall(b => {
-        let newX = b.x + b.vx;
-        let newY = b.y + b.vy;
-        let newVx = b.vx;
-        let newVy = b.vy;
-
-        // Wall collision
-        if (newX <= 0 || newX >= CANVAS_WIDTH - BALL_SIZE) newVx = -newVx;
-        if (newY <= 0) newVy = -newVy;
-
-        // Paddle collision
-        if (newY + BALL_SIZE >= CANVAS_HEIGHT - PADDLE_HEIGHT - 10 &&
-            newY <= CANVAS_HEIGHT - 10 &&
-            newX + BALL_SIZE >= paddleX &&
-            newX <= paddleX + PADDLE_WIDTH) {
-          newVy = -Math.abs(newVy);
-          newVx += (newX - (paddleX + PADDLE_WIDTH / 2)) * 0.1;
-        }
-
-        // Game over
-        if (newY > CANVAS_HEIGHT) {
-          setGameOver(true);
-        }
-
-        return { x: newX, y: newY, vx: newVx, vy: newVy };
-      });
-
-      // Brick collision
-      setBricks(currentBricks => {
-        const newBricks = currentBricks.map(row => [...row]);
-        let hit = false;
-
-        for (let row = 0; row < BRICK_ROWS; row++) {
-          for (let col = 0; col < BRICK_COLS; col++) {
-            if (newBricks[row][col]) {
-              const brickX = col * (BRICK_WIDTH + BRICK_PADDING) + 35;
-              const brickY = row * (BRICK_HEIGHT + BRICK_PADDING) + 40;
-
-              if (ball.x + BALL_SIZE >= brickX &&
-                  ball.x <= brickX + BRICK_WIDTH &&
-                  ball.y + BALL_SIZE >= brickY &&
-                  ball.y <= brickY + BRICK_HEIGHT) {
-                newBricks[row][col] = false;
-                hit = true;
-                setScore(s => s + 10);
-              }
-            }
-          }
-        }
-
-        if (hit) {
-          setBall(b => ({ ...b, vy: -b.vy }));
-        }
-
-        // Check win
-        if (newBricks.every(row => row.every(brick => !brick))) {
-          setWon(true);
-        }
-
-        return newBricks;
-      });
-    }, 1000 / 60);
-
-    return () => clearInterval(interval);
-  }, [gameOver, won, isPaused, paddleX, ball]);
-
-  useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Clear
-    ctx.fillStyle = '#0F0F1A';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    const update = () => {
+      if (gameOver || won || isPaused) {
+        requestRef.current = requestAnimationFrame(update);
+        return;
+      }
 
-    // Draw bricks
-    for (let row = 0; row < BRICK_ROWS; row++) {
-      for (let col = 0; col < BRICK_COLS; col++) {
-        if (bricks[row]?.[col]) {
-          const x = col * (BRICK_WIDTH + BRICK_PADDING) + 35;
-          const y = row * (BRICK_HEIGHT + BRICK_PADDING) + 40;
-          ctx.fillStyle = BRICK_COLORS[row];
-          ctx.fillRect(x, y, BRICK_WIDTH, BRICK_HEIGHT);
-          ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
-          ctx.fillRect(x, y, BRICK_WIDTH, 4);
+      const state = gameStateRef.current;
+
+      // Move paddle
+      if (state.keys.left) {
+        state.paddleX = Math.max(0, state.paddleX - 8);
+      }
+      if (state.keys.right) {
+        state.paddleX = Math.min(CANVAS_WIDTH - PADDLE_WIDTH, state.paddleX + 8);
+      }
+
+      // Move ball
+      state.ball.x += state.ball.vx;
+      state.ball.y += state.ball.vy;
+
+      // Wall collision
+      if (state.ball.x <= 0 || state.ball.x >= CANVAS_WIDTH - BALL_SIZE) {
+        state.ball.vx = -state.ball.vx;
+      }
+      if (state.ball.y <= 0) {
+        state.ball.vy = -state.ball.vy;
+      }
+
+      // Paddle collision
+      if (state.ball.y + BALL_SIZE >= CANVAS_HEIGHT - PADDLE_HEIGHT - 10 &&
+          state.ball.y <= CANVAS_HEIGHT - 10 &&
+          state.ball.x + BALL_SIZE >= state.paddleX &&
+          state.ball.x <= state.paddleX + PADDLE_WIDTH) {
+        state.ball.vy = -Math.abs(state.ball.vy);
+        state.ball.vx += (state.ball.x - (state.paddleX + PADDLE_WIDTH / 2)) * 0.1;
+      }
+
+      // Game over
+      if (state.ball.y > CANVAS_HEIGHT) {
+        setGameOver(true);
+      }
+
+      // Brick collision
+      let hit = false;
+      for (let row = 0; row < BRICK_ROWS; row++) {
+        for (let col = 0; col < BRICK_COLS; col++) {
+          if (state.bricks[row][col]) {
+            const brickX = col * (BRICK_WIDTH + BRICK_PADDING) + 35;
+            const brickY = row * (BRICK_HEIGHT + BRICK_PADDING) + 40;
+
+            if (state.ball.x + BALL_SIZE >= brickX &&
+                state.ball.x <= brickX + BRICK_WIDTH &&
+                state.ball.y + BALL_SIZE >= brickY &&
+                state.ball.y <= brickY + BRICK_HEIGHT) {
+              state.bricks[row][col] = false;
+              hit = true;
+              state.score += 10;
+              setScore(state.score);
+            }
+          }
         }
       }
-    }
 
-    // Draw paddle
-    ctx.fillStyle = '#4ADE80';
-    ctx.fillRect(paddleX, CANVAS_HEIGHT - PADDLE_HEIGHT - 10, PADDLE_WIDTH, PADDLE_HEIGHT);
+      if (hit) {
+        state.ball.vy = -state.ball.vy;
+      }
 
-    // Draw ball
-    ctx.fillStyle = '#FACC15';
-    ctx.beginPath();
-    ctx.arc(ball.x + BALL_SIZE / 2, ball.y + BALL_SIZE / 2, BALL_SIZE / 2, 0, Math.PI * 2);
-    ctx.fill();
-  }, [paddleX, ball, bricks]);
+      // Check win
+      if (state.bricks.every(row => row.every(brick => !brick))) {
+        setWon(true);
+      }
+
+      // Render
+      ctx.fillStyle = '#0F0F1A';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Draw bricks
+      for (let row = 0; row < BRICK_ROWS; row++) {
+        for (let col = 0; col < BRICK_COLS; col++) {
+          if (state.bricks[row][col]) {
+            const x = col * (BRICK_WIDTH + BRICK_PADDING) + 35;
+            const y = row * (BRICK_HEIGHT + BRICK_PADDING) + 40;
+            ctx.fillStyle = BRICK_COLORS[row];
+            ctx.fillRect(x, y, BRICK_WIDTH, BRICK_HEIGHT);
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+            ctx.fillRect(x, y, BRICK_WIDTH, 4);
+          }
+        }
+      }
+
+      // Draw paddle
+      ctx.fillStyle = '#4ADE80';
+      ctx.fillRect(state.paddleX, CANVAS_HEIGHT - PADDLE_HEIGHT - 10, PADDLE_WIDTH, PADDLE_HEIGHT);
+
+      // Draw ball
+      ctx.fillStyle = '#FACC15';
+      ctx.beginPath();
+      ctx.arc(state.ball.x + BALL_SIZE / 2, state.ball.y + BALL_SIZE / 2, BALL_SIZE / 2, 0, Math.PI * 2);
+      ctx.fill();
+
+      requestRef.current = requestAnimationFrame(update);
+    };
+
+    requestRef.current = requestAnimationFrame(update);
+
+    return () => {
+      if (requestRef.current !== null) {
+        cancelAnimationFrame(requestRef.current);
+      }
+    };
+  }, [gameOver, won, isPaused]);
 
   return (
     <div className="flex flex-col items-center gap-4">
@@ -231,21 +236,21 @@ export function BreakoutGame() {
       {/* Mobile Controls */}
       <div className="grid grid-cols-2 gap-2 md:hidden w-full max-w-xs">
         <Button 
-          onMouseDown={() => { keysRef.current.left = true; }} 
-          onMouseUp={() => { keysRef.current.left = false; }}
-          onMouseLeave={() => { keysRef.current.left = false; }}
-          onTouchStart={() => { keysRef.current.left = true; }}
-          onTouchEnd={() => { keysRef.current.left = false; }}
+          onMouseDown={() => { gameStateRef.current.keys.left = true; }} 
+          onMouseUp={() => { gameStateRef.current.keys.left = false; }}
+          onMouseLeave={() => { gameStateRef.current.keys.left = false; }}
+          onTouchStart={() => { gameStateRef.current.keys.left = true; }}
+          onTouchEnd={() => { gameStateRef.current.keys.left = false; }}
           variant="outline" 
           className="h-16 border-white/20 text-white text-2xl"
           disabled={gameOver || won}
         >←</Button>
         <Button 
-          onMouseDown={() => { keysRef.current.right = true; }} 
-          onMouseUp={() => { keysRef.current.right = false; }}
-          onMouseLeave={() => { keysRef.current.right = false; }}
-          onTouchStart={() => { keysRef.current.right = true; }}
-          onTouchEnd={() => { keysRef.current.right = false; }}
+          onMouseDown={() => { gameStateRef.current.keys.right = true; }} 
+          onMouseUp={() => { gameStateRef.current.keys.right = false; }}
+          onMouseLeave={() => { gameStateRef.current.keys.right = false; }}
+          onTouchStart={() => { gameStateRef.current.keys.right = true; }}
+          onTouchEnd={() => { gameStateRef.current.keys.right = false; }}
           variant="outline" 
           className="h-16 border-white/20 text-white text-2xl"
           disabled={gameOver || won}
