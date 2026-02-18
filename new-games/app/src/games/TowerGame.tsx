@@ -170,17 +170,52 @@ export function TowerGame() {
         )}
       </div>
 
-      <div className="flex gap-2">
-        {started && (
-          <Button onClick={() => setIsPaused(!isPaused)} variant="outline" size="sm">
-            {isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
-          </Button>
-        )}
-        {started && (
-          <Button onClick={resetGame} variant="outline" size="sm">
-            <RotateCcw className="w-4 h-4" />
-          </Button>
-        )}
+      {/* Mobile Controls */}
+      <div className="md:hidden w-full max-w-xs">
+        <Button 
+          onClick={() => {
+            if (!started || gameOver) return;
+            if (!isPaused && movingBlock) {
+              const lastBlock = blocks[blocks.length - 1];
+              const overlap = Math.max(0, Math.min(movingBlock.x + BLOCK_WIDTH, lastBlock.x + lastBlock.width) - 
+                                            Math.max(movingBlock.x, lastBlock.x));
+              
+              if (overlap <= 0) {
+                setGameOver(true);
+                return;
+              }
+
+              const newX = Math.max(movingBlock.x, lastBlock.x);
+              const newBlock = {
+                x: newX,
+                y: lastBlock.y - BLOCK_HEIGHT,
+                width: overlap,
+              };
+
+              setBlocks(prev => [...prev, newBlock]);
+              setScore(s => s + 1);
+              setMovingBlock({ x: 0, direction: movingBlock.direction * 1.02 });
+            } else if (isPaused) {
+              setIsPaused(false);
+            }
+          }} 
+          variant="outline" 
+          className="w-full h-16 border-white/20 text-white text-xl"
+          disabled={!started || gameOver}
+        >
+          👇 放置方块
+        </Button>
+      </div>
+
+      <div className="flex gap-2 md:hidden">
+        <Button onClick={() => setIsPaused(!isPaused)} variant="outline" size="sm" className="flex-1">
+          {isPaused ? <Play className="w-4 h-4 mr-2" /> : <Pause className="w-4 h-4 mr-2" />}
+          {isPaused ? '继续' : '暂停'}
+        </Button>
+        <Button onClick={resetGame} variant="outline" size="sm" className="flex-1">
+          <RotateCcw className="w-4 h-4 mr-2" />
+          重置
+        </Button>
       </div>
 
       <div className="text-white/40 text-sm text-center">

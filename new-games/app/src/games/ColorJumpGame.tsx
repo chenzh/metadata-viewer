@@ -192,17 +192,33 @@ export function ColorJumpGame() {
         )}
       </div>
 
-      <div className="flex gap-2">
-        {started && (
-          <Button onClick={() => setIsPaused(!isPaused)} variant="outline" size="sm">
-            {isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
-          </Button>
-        )}
-        {started && (
-          <Button onClick={initGame} variant="outline" size="sm">
-            <RotateCcw className="w-4 h-4" />
-          </Button>
-        )}
+      {/* Mobile Controls */}
+      <div className="grid grid-cols-2 gap-2 md:hidden w-full max-w-xs">
+        <Button 
+          onMouseDown={() => { setBall(b => ({ ...b, x: Math.max(BALL_SIZE, b.x - 15) })); }} 
+          onTouchStart={() => { setBall(b => ({ ...b, x: Math.max(BALL_SIZE, b.x - 15) })); }}
+          variant="outline" 
+          className="h-16 border-white/20 text-white text-2xl"
+          disabled={!started || gameOver}
+        >←</Button>
+        <Button 
+          onMouseDown={() => { setBall(b => ({ ...b, x: Math.min(CANVAS_WIDTH - BALL_SIZE, b.x + 15) })); }} 
+          onTouchStart={() => { setBall(b => ({ ...b, x: Math.min(CANVAS_WIDTH - BALL_SIZE, b.x + 15) })); }}
+          variant="outline" 
+          className="h-16 border-white/20 text-white text-2xl"
+          disabled={!started || gameOver}
+        >→</Button>
+      </div>
+
+      <div className="flex gap-2 md:hidden">
+        <Button onClick={() => setIsPaused(!isPaused)} variant="outline" size="sm" className="flex-1">
+          {isPaused ? <Play className="w-4 h-4 mr-2" /> : <Pause className="w-4 h-4 mr-2" />}
+          {isPaused ? '继续' : '暂停'}
+        </Button>
+        <Button onClick={initGame} variant="outline" size="sm" className="flex-1">
+          <RotateCcw className="w-4 h-4 mr-2" />
+          重置
+        </Button>
       </div>
 
       <div className="text-white/40 text-sm text-center">

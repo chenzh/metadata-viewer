@@ -282,17 +282,66 @@ export function FroggerGame() {
         )}
       </div>
 
-      <div className="flex gap-2">
-        {started && (
-          <Button onClick={() => setIsPaused(!isPaused)} variant="outline" size="sm">
-            {isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
-          </Button>
-        )}
-        {started && (
-          <Button onClick={resetGame} variant="outline" size="sm">
-            <RotateCcw className="w-4 h-4" />
-          </Button>
-        )}
+      {/* Mobile Controls */}
+      <div className="grid grid-cols-3 gap-2 md:hidden">
+        <div />
+        <Button 
+          onClick={() => { 
+            if (!started || gameOver || won || isPaused) return;
+            const step = 40;
+            setFrog(f => ({ ...f, y: Math.max(0, f.y - step) }));
+            setScore(s => s + 10);
+          }} 
+          variant="outline" 
+          className="border-white/20 text-white h-14 text-2xl"
+          disabled={!started || gameOver || won}
+        >↑</Button>
+        <div />
+        <Button 
+          onClick={() => { 
+            if (!started || gameOver || won || isPaused) return;
+            const step = 40;
+            setFrog(f => ({ ...f, x: Math.max(0, f.x - step) }));
+          }} 
+          variant="outline" 
+          className="border-white/20 text-white h-14 text-2xl"
+          disabled={!started || gameOver || won}
+        >←</Button>
+        <Button 
+          onClick={() => { if (started && !gameOver && !won) setIsPaused(p => !p); }} 
+          variant="outline" 
+          className="border-white/20 text-white h-14"
+          disabled={!started || gameOver || won}
+        >{isPaused ? <Play className="w-6 h-6" /> : <Pause className="w-6 h-6" />}</Button>
+        <Button 
+          onClick={() => { 
+            if (!started || gameOver || won || isPaused) return;
+            const step = 40;
+            setFrog(f => ({ ...f, x: Math.min(CANVAS_WIDTH - FROG_SIZE, f.x + step) }));
+          }} 
+          variant="outline" 
+          className="border-white/20 text-white h-14 text-2xl"
+          disabled={!started || gameOver || won}
+        >→</Button>
+        <div />
+        <Button 
+          onClick={() => { 
+            if (!started || gameOver || won || isPaused) return;
+            const step = 40;
+            setFrog(f => ({ ...f, y: Math.min(CANVAS_HEIGHT - FROG_SIZE, f.y + step) }));
+          }} 
+          variant="outline" 
+          className="border-white/20 text-white h-14 text-2xl"
+          disabled={!started || gameOver || won}
+        >↓</Button>
+        <div />
+      </div>
+
+      <div className="flex gap-2 md:hidden">
+        <Button onClick={resetGame} variant="outline" size="sm" className="flex-1">
+          <RotateCcw className="w-4 h-4 mr-2" />
+          重置
+        </Button>
       </div>
 
       <div className="text-white/40 text-sm text-center">

@@ -235,12 +235,38 @@ export function PongGame() {
         )}
       </div>
 
-      <div className="flex gap-2">
-        <Button onClick={() => setIsPaused(!isPaused)} variant="outline" size="sm">
-          {isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
+      {/* Mobile Controls */}
+      <div className="grid grid-cols-2 gap-2 md:hidden w-full max-w-xs">
+        <Button 
+          onMouseDown={() => { keysRef.current.up = true; }} 
+          onMouseUp={() => { keysRef.current.up = false; }}
+          onMouseLeave={() => { keysRef.current.up = false; }}
+          onTouchStart={() => { keysRef.current.up = true; }}
+          onTouchEnd={() => { keysRef.current.up = false; }}
+          variant="outline" 
+          className="h-16 border-white/20 text-white text-2xl"
+          disabled={gameOver}
+        >↑</Button>
+        <Button 
+          onMouseDown={() => { keysRef.current.down = true; }} 
+          onMouseUp={() => { keysRef.current.down = false; }}
+          onMouseLeave={() => { keysRef.current.down = false; }}
+          onTouchStart={() => { keysRef.current.down = true; }}
+          onTouchEnd={() => { keysRef.current.down = false; }}
+          variant="outline" 
+          className="h-16 border-white/20 text-white text-2xl"
+          disabled={gameOver}
+        >↓</Button>
+      </div>
+
+      <div className="flex gap-2 md:hidden">
+        <Button onClick={() => setIsPaused(!isPaused)} variant="outline" size="sm" className="flex-1">
+          {isPaused ? <Play className="w-4 h-4 mr-2" /> : <Pause className="w-4 h-4 mr-2" />}
+          {isPaused ? '继续' : '暂停'}
         </Button>
-        <Button onClick={resetGame} variant="outline" size="sm">
-          <RotateCcw className="w-4 h-4" />
+        <Button onClick={resetGame} variant="outline" size="sm" className="flex-1">
+          <RotateCcw className="w-4 h-4 mr-2" />
+          重置
         </Button>
       </div>
 

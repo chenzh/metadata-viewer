@@ -244,12 +244,26 @@ export function FlappyGame() {
         )}
       </div>
 
-      <div className="flex gap-2">
-        <Button onClick={() => setIsPaused(!isPaused)} variant="outline" size="sm" disabled={!started || gameOver}>
-          {isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
+      {/* Mobile Controls */}
+      <div className="md:hidden w-full max-w-xs">
+        <Button 
+          onClick={jump} 
+          variant="outline" 
+          className="w-full h-16 border-white/20 text-white text-xl"
+          disabled={gameOver}
+        >
+          {started ? '👆 飞行' : '▶ 开始'}
         </Button>
-        <Button onClick={resetGame} variant="outline" size="sm">
-          <RotateCcw className="w-4 h-4" />
+      </div>
+
+      <div className="flex gap-2 md:hidden">
+        <Button onClick={() => setIsPaused(!isPaused)} variant="outline" size="sm" disabled={!started || gameOver} className="flex-1">
+          {isPaused ? <Play className="w-4 h-4 mr-2" /> : <Pause className="w-4 h-4 mr-2" />}
+          {isPaused ? '继续' : '暂停'}
+        </Button>
+        <Button onClick={resetGame} variant="outline" size="sm" className="flex-1">
+          <RotateCcw className="w-4 h-4 mr-2" />
+          重置
         </Button>
       </div>
 

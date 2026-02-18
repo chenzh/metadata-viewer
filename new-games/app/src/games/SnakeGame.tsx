@@ -249,6 +249,44 @@ export function SnakeGame() {
         </Button>
       </div>
 
+      {/* Mobile Controls */}
+      <div className="grid grid-cols-3 gap-2 md:hidden">
+        <div />
+        <Button 
+          onClick={() => { if (!gameOver && direction.y === 0) setDirection({ x: 0, y: -1 }); }} 
+          variant="outline" 
+          className="border-white/20 text-white h-14 text-2xl"
+          disabled={gameOver}
+        >↑</Button>
+        <div />
+        <Button 
+          onClick={() => { if (!gameOver && direction.x === 0) setDirection({ x: -1, y: 0 }); }} 
+          variant="outline" 
+          className="border-white/20 text-white h-14 text-2xl"
+          disabled={gameOver}
+        >←</Button>
+        <Button 
+          onClick={togglePause} 
+          variant="outline" 
+          className="border-white/20 text-white h-14"
+          disabled={gameOver}
+        >{isPaused ? <Play className="w-6 h-6" /> : <Pause className="w-6 h-6" />}</Button>
+        <Button 
+          onClick={() => { if (!gameOver && direction.x === 0) setDirection({ x: 1, y: 0 }); }} 
+          variant="outline" 
+          className="border-white/20 text-white h-14 text-2xl"
+          disabled={gameOver}
+        >→</Button>
+        <div />
+        <Button 
+          onClick={() => { if (!gameOver && direction.y === 0) setDirection({ x: 0, y: 1 }); }} 
+          variant="outline" 
+          className="border-white/20 text-white h-14 text-2xl"
+          disabled={gameOver}
+        >↓</Button>
+        <div />
+      </div>
+
       {/* Instructions */}
       <div className="text-white/40 text-sm text-center">
         使用方向键控制蛇的移动，空格键暂停
