@@ -101,6 +101,8 @@
     </div>
 
     <script>
+    // 禁止长按复制菜单
+    document.addEventListener('contextmenu', e => e.preventDefault());
         const SIZE = 4;
         let board = [], emptyPos = { r: 3, c: 3 }, moves = 0, timer, seconds = 0, isPlaying = false;
         

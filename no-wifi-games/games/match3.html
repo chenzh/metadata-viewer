@@ -94,6 +94,8 @@
     </div>
 
     <script>
+    // 禁止长按复制菜单
+    document.addEventListener('contextmenu', e => e.preventDefault());
         const ROWS = 8, COLS = 8;
         const GEM_TYPES = ['🔴', '🔵', '🟢', '🟡', '🟣', '🟠', '🔴'];
         const GEM_CLASSES = ['red', 'blue', 'green', 'yellow', 'purple', 'orange', 'pink'];

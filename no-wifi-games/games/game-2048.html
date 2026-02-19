@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>2048</title>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-user-select: none; user-select: none; }
     body {
       font-family: 'Segoe UI', sans-serif;
       background: #1a1a2e;
@@ -138,6 +138,8 @@
   <button class="btn" onclick="resetGame()">New Game</button>
   
   <script>
+    // 禁止长按复制菜单
+    document.addEventListener('contextmenu', e => e.preventDefault());
     const gridSize = 4;
     let board = [];
     let score = 0;

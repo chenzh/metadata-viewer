@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>西蒙记忆游戏 - No WiFi Games</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-user-select: none; user-select: none; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
@@ -90,6 +90,8 @@
     <button id="startBtn" onclick="startGame()">开始游戏</button>
 
     <script>
+    // 禁止长按复制菜单
+    document.addEventListener('contextmenu', e => e.preventDefault());
         const colors = ['green', 'red', 'yellow', 'blue'];
         const tones = [329.63, 261.63, 220.00, 164.81];
         let sequence = [], playerSequence = [], level = 0, highScore = 0;

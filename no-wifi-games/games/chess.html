@@ -52,6 +52,8 @@
   <a href="index.html" class="back-link">← 返回游戏列表</a>
 
   <script>
+    // 禁止长按复制菜单
+    document.addEventListener('contextmenu', e => e.preventDefault());
     const PIECES = {
       white: { king: '♔', queen: '♕', rook: '♖', bishop: '♗', knight: '♘', pawn: '♙' },
       black: { king: '♚', queen: '♛', rook: '♜', bishop: '♝', knight: '♞', pawn: '♟' }

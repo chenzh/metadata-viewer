@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>黑白棋</title>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-user-select: none; user-select: none; }
     body {
       font-family: 'Segoe UI', sans-serif;
       background: #1a1a2e;
@@ -75,6 +75,8 @@
   <a href="index.html" class="back-link">← 返回游戏列表</a>
 
   <script>
+    // 禁止长按复制菜单
+    document.addEventListener('contextmenu', e => e.preventDefault());
     let board = [], current = 'black', lastMove = null, gameOver = false;
     const DIRS = [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
 

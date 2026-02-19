@@ -59,6 +59,8 @@
   <a href="index.html" class="back-link">← 返回游戏列表</a>
 
   <script>
+    // 禁止长按复制菜单
+    document.addEventListener('contextmenu', e => e.preventDefault());
     const ROWS = 8, COLS = 8;
     const emojis = ['🍎', '🍌', '🍇', '🍉', '🍒', '🍓', '🥝', '🍑'];
     let board = [], selected = null, remaining = 32, hints = 3;

@@ -76,6 +76,8 @@
   <a href="index.html" class="back-link">← 返回游戏列表</a>
 
   <script>
+    // 禁止长按复制菜单
+    document.addEventListener('contextmenu', e => e.preventDefault());
     const BOARD_W = 4, BOARD_H = 5, CELL_SIZE = 75;
     let pieces = [], selectedPiece = null, steps = 0, currentLevel = 0;
     

@@ -59,6 +59,8 @@
   <a href="index.html" class="back-link">← 返回游戏列表</a>
 
   <script>
+    // 禁止长按复制菜单
+    document.addEventListener('contextmenu', e => e.preventDefault());
     const emojis = ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼'];
     let cards = [], flipped = [], matched = 0, moves = 0, timer = 0, interval = null, locked = false;
 

@@ -137,6 +137,8 @@
     </div>
 
     <script>
+    // 禁止长按复制菜单
+    document.addEventListener('contextmenu', e => e.preventDefault());
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         

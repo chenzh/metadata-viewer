@@ -74,6 +74,8 @@
   <a href="index.html" class="back-link">← 返回游戏列表</a>
 
   <script>
+    // 禁止长按复制菜单
+    document.addEventListener('contextmenu', e => e.preventDefault());
     const configs = { easy: { w: 8, h: 8, mines: 10 }, medium: { w: 12, h: 12, mines: 20 }, hard: { w: 16, h: 16, mines: 40 } };
     let board = [], revealed = [], flagged = [], gameOver = false, firstClick = true, timer = 0, timerInterval = null;
 
