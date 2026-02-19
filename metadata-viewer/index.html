@@ -27,17 +27,87 @@
             text-align: center;
             color: white;
             margin-bottom: 30px;
+            position: relative;
         }
-        
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 20px;
+        }
+
         .header h1 {
             font-size: 2.5rem;
             margin-bottom: 10px;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
         }
-        
+
         .header p {
             font-size: 1.1rem;
             opacity: 0.9;
+        }
+
+        /* Google 登录样式 */
+        .auth-section {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .user-info {
+            display: none;
+            align-items: center;
+            gap: 10px;
+            background: rgba(255,255,255,0.15);
+            padding: 8px 15px;
+            border-radius: 30px;
+            backdrop-filter: blur(10px);
+        }
+
+        .user-info.active {
+            display: flex;
+        }
+
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: 2px solid white;
+        }
+
+        .user-name {
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .logout-btn {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .logout-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .g_id_signin {
+            display: block;
+        }
+
+        .g_id_signin.hidden {
+            display: none;
+        }
+
+        .login-hint {
+            font-size: 0.8rem;
+            color: rgba(255,255,255,0.7);
+            margin-top: 5px;
         }
         
         .upload-area {
@@ -265,15 +335,155 @@
             margin-top: 15px;
             border: none;
         }
+
+        /* IP 地理位置信息卡片样式 */
+        .ip-info-card {
+            background: white;
+            border-radius: 20px;
+            padding: 25px 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .ip-info-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .ip-info-icon {
+            font-size: 1.5rem;
+        }
+
+        .ip-info-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #333;
+            flex: 1;
+        }
+
+        .ip-loading {
+            font-size: 0.9rem;
+            color: #667eea;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .ip-info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+        }
+
+        .ip-info-item {
+            background: #f8f9ff;
+            padding: 15px;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .ip-info-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.2);
+        }
+
+        .ip-label {
+            font-size: 0.85rem;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .ip-value {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #333;
+            word-break: break-all;
+        }
+
+        .ip-error {
+            color: #ff6b6b;
+            text-align: center;
+            padding: 10px;
+        }
     </style>
+    
+    <!-- Google Identity Services 脚本 -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
     <div class="container">
         <div class="header">
+            <div class="header-top">
+                <div></div>
+                <!-- Google 登录区域 -->
+                <div class="auth-section">
+                    <div id="g_id_signin" class="g_id_signin"
+                         data-type="standard"
+                         data-shape="pill"
+                         data-theme="outline"
+                         data-text="signin_with"
+                         data-size="medium"
+                         data-logo_alignment="left"></div>
+                    <div id="userInfo" class="user-info">
+                        <img id="userAvatar" class="user-avatar" src="" alt="avatar">
+                        <span id="userName" class="user-name"></span>
+                        <button class="logout-btn" onclick="signOut()">退出</button>
+                    </div>
+                </div>
+            </div>
             <h1>📷 MetaData Viewer</h1>
             <p>在线查看图片、文档、视频等文件的 EXIF 和元数据信息</p>
+            <p class="login-hint" id="loginHint">登录后可保存您的解析历史</p>
         </div>
-        
+
+        <!-- IP 地理位置信息卡片 -->
+        <div class="ip-info-card" id="ipInfoCard">
+            <div class="ip-info-header">
+                <span class="ip-info-icon">🌐</span>
+                <span class="ip-info-title">访问者信息</span>
+                <span class="ip-loading" id="ipLoading">获取中...</span>
+            </div>
+            <div class="ip-info-content" id="ipInfoContent" style="display: none;">
+                <div class="ip-info-grid">
+                    <div class="ip-info-item">
+                        <span class="ip-label">IP 地址</span>
+                        <span class="ip-value" id="ipAddress">-</span>
+                    </div>
+                    <div class="ip-info-item">
+                        <span class="ip-label">国家/地区</span>
+                        <span class="ip-value" id="ipCountry">-</span>
+                    </div>
+                    <div class="ip-info-item">
+                        <span class="ip-label">省份/州</span>
+                        <span class="ip-value" id="ipRegion">-</span>
+                    </div>
+                    <div class="ip-info-item">
+                        <span class="ip-label">城市</span>
+                        <span class="ip-value" id="ipCity">-</span>
+                    </div>
+                    <div class="ip-info-item">
+                        <span class="ip-label">运营商</span>
+                        <span class="ip-value" id="ipOrg">-</span>
+                    </div>
+                    <div class="ip-info-item">
+                        <span class="ip-label">时区</span>
+                        <span class="ip-value" id="ipTimezone">-</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="upload-area" id="uploadArea">
             <div class="upload-icon">📁</div>
             <div class="upload-text">拖放文件到这里</div>
@@ -306,6 +516,183 @@
 
     <script src="https://cdn.jsdelivr.net/npm/exifr@7.1.3/dist/full.umd.min.js"></script>
     <script>
+        // ============================================
+        // Google 登录相关配置和处理
+        // ============================================
+        
+        // ⚠️ 重要：请替换为你自己的 Google OAuth 客户端 ID
+        // 获取方式：
+        // 1. 访问 https://console.cloud.google.com/
+        // 2. 创建项目或选择现有项目
+        // 3. 启用 "Google Identity Toolkit API"
+        // 4. 创建 OAuth 2.0 客户端 ID（Web 应用类型）
+        // 5. 添加授权的 JavaScript 来源：http://localhost:8080 和你的域名
+        const GOOGLE_CLIENT_ID = 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com';
+        
+        let currentUser = null;
+        
+        // 初始化 Google 登录
+        function initializeGoogleSignIn() {
+            if (GOOGLE_CLIENT_ID === 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com') {
+                console.warn('⚠️ 请配置您的 Google Client ID 以启用登录功能');
+                document.getElementById('loginHint').textContent = '管理员提示：请配置 Google Client ID 以启用登录';
+                return;
+            }
+            
+            // 检查本地存储的登录状态
+            const savedUser = localStorage.getItem('metaviewer_user');
+            if (savedUser) {
+                try {
+                    currentUser = JSON.parse(savedUser);
+                    showUserInfo(currentUser);
+                } catch (e) {
+                    localStorage.removeItem('metaviewer_user');
+                }
+            }
+            
+            // 初始化 Google 按钮
+            google.accounts.id.initialize({
+                client_id: GOOGLE_CLIENT_ID,
+                callback: handleCredentialResponse,
+                auto_select: false,
+                cancel_on_tap_outside: true
+            });
+            
+            // 渲染登录按钮
+            google.accounts.id.renderButton(
+                document.getElementById('g_id_signin'),
+                {
+                    type: 'standard',
+                    shape: 'pill',
+                    theme: 'outline',
+                    text: 'signin_with',
+                    size: 'medium',
+                    logo_alignment: 'left',
+                    width: 200
+                }
+            );
+        }
+        
+        // 处理 Google 登录响应
+        function handleCredentialResponse(response) {
+            // 解码 JWT token 获取用户信息
+            const credential = response.credential;
+            const payload = JSON.parse(atob(credential.split('.')[1]));
+            
+            currentUser = {
+                id: payload.sub,
+                name: payload.name,
+                email: payload.email,
+                picture: payload.picture,
+                givenName: payload.given_name,
+                familyName: payload.family_name,
+                token: credential
+            };
+            
+            // 保存到本地存储
+            localStorage.setItem('metaviewer_user', JSON.stringify(currentUser));
+            
+            // 显示用户信息
+            showUserInfo(currentUser);
+            
+            console.log('✅ 登录成功:', currentUser.name);
+        }
+        
+        // 显示用户信息
+        function showUserInfo(user) {
+            document.getElementById('userAvatar').src = user.picture;
+            document.getElementById('userName').textContent = user.name;
+            document.getElementById('userInfo').classList.add('active');
+            document.getElementById('g_id_signin').classList.add('hidden');
+            document.getElementById('loginHint').textContent = `欢迎回来，${user.givenName || user.name}！`;
+        }
+        
+        // 退出登录
+        function signOut() {
+            // 清除本地存储
+            localStorage.removeItem('metaviewer_user');
+            currentUser = null;
+            
+            // 更新 UI
+            document.getElementById('userInfo').classList.remove('active');
+            document.getElementById('g_id_signin').classList.remove('hidden');
+            document.getElementById('loginHint').textContent = '登录后可保存您的解析历史';
+            
+            // 断开 Google 会话
+            if (typeof google !== 'undefined' && google.accounts) {
+                google.accounts.id.disableAutoSelect();
+            }
+            
+            console.log('👋 已退出登录');
+        }
+        
+        // ============================================
+        // 获取 IP 地理位置信息
+        // ============================================
+        async function getIpLocation() {
+            const loadingEl = document.getElementById('ipLoading');
+            const contentEl = document.getElementById('ipInfoContent');
+            
+            try {
+                // 使用 ipapi.co 获取 IP 地理位置信息（免费版，每小时限制 1000 次）
+                const response = await fetch('https://ipapi.co/json/');
+                
+                if (!response.ok) {
+                    throw new Error('无法获取 IP 信息');
+                }
+                
+                const data = await response.json();
+                
+                // 更新页面显示
+                document.getElementById('ipAddress').textContent = data.ip || '-';
+                document.getElementById('ipCountry').textContent = data.country_name && data.country_code 
+                    ? `${data.country_name} (${data.country_code})` 
+                    : (data.country_name || data.country_code || '-');
+                document.getElementById('ipRegion').textContent = data.region || data.region_code || '-';
+                document.getElementById('ipCity').textContent = data.city || '-';
+                document.getElementById('ipOrg').textContent = data.org || data.asn || '-';
+                document.getElementById('ipTimezone').textContent = data.timezone || '-';
+                
+                // 隐藏加载状态，显示内容
+                loadingEl.style.display = 'none';
+                contentEl.style.display = 'block';
+                
+            } catch (error) {
+                console.error('获取 IP 信息失败:', error);
+                loadingEl.textContent = '获取失败';
+                
+                // 尝试备用 API
+                try {
+                    const backupResponse = await fetch('http://ip-api.com/json/?fields=status,message,country,countryCode,region,regionName,city,isp,org,as,query,timezone');
+                    const backupData = await backupResponse.json();
+                    
+                    if (backupData.status === 'success') {
+                        document.getElementById('ipAddress').textContent = backupData.query || '-';
+                        document.getElementById('ipCountry').textContent = backupData.country && backupData.countryCode 
+                            ? `${backupData.country} (${backupData.countryCode})` 
+                            : (backupData.country || '-');
+                        document.getElementById('ipRegion').textContent = backupData.regionName || backupData.region || '-';
+                        document.getElementById('ipCity').textContent = backupData.city || '-';
+                        document.getElementById('ipOrg').textContent = backupData.isp || backupData.org || '-';
+                        document.getElementById('ipTimezone').textContent = backupData.timezone || '-';
+                        
+                        loadingEl.style.display = 'none';
+                        contentEl.style.display = 'block';
+                    }
+                } catch (backupError) {
+                    contentEl.innerHTML = '<div class="ip-error">获取地理位置信息失败，请检查网络连接</div>';
+                    contentEl.style.display = 'block';
+                }
+            }
+        }
+
+        // 页面加载时获取 IP 信息
+        document.addEventListener('DOMContentLoaded', () => {
+            getIpLocation();
+            // 延迟初始化 Google 登录，确保脚本已加载
+            setTimeout(initializeGoogleSignIn, 500);
+        });
+
         const uploadArea = document.getElementById('uploadArea');
         const fileInput = document.getElementById('fileInput');
         const loading = document.getElementById('loading');

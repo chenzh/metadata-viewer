@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>恐龙跑酷</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #1a1a2e;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+      min-height: 100vh;
+      color: white;
+    }
+    h1 { font-size: 1.5rem; margin-bottom: 10px; }
+    .info { display: flex; gap: 30px; margin-bottom: 10px; }
+    #gameCanvas { border: 3px solid #444; cursor: pointer; }
+    .btn { margin-top: 15px; padding: 12px 30px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 1rem; }
+    .btn:hover { background: #45a049; }
+    .hint { margin-top: 10px; color: #888; }
+    .back-link { margin-top: 15px; color: #888; text-decoration: none; }
+    @media (max-width: 400px) { #gameCanvas { width: 350px; height: 200px; } }
+  </style>
+</head>
+<body>
+  <h1>🦖 恐龙跑酷</h1>
+  <div class="info">
+    <span>得分: <strong id="score">0</strong></span>
+    <span>最高分: <strong id="highScore">0</strong></span>
+  </div>
+  <canvas id="gameCanvas" width="400" height="200"></canvas>
+  <button class="btn" onclick="startGame()">开始/跳跃</button>
+  <p class="hint">点击或按空格键跳跃</p>
+  <a href="index.html" class="back-link">← 返回游戏列表</a>
+
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    let dino = { x: 50, y: 140, velocity: 0, grounded: true },
+        obstacles = [], clouds = [],
+        score = 0, highScore = localStorage.getItem('dinoHigh') || 0,
+        gameLoop = null, gameOver = false, speed = 4, frame = 0,
+        legFrame = 0;
+    
+    const GRAVITY = 0.6, JUMP = -10, GROUND_Y = 150;
+    document.getElementById('highScore').textContent = highScore;
+    
+    function draw() {
+      ctx.fillStyle = '#1a1a2e';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      // Clouds
+      ctx.fillStyle = 'rgba(255,255,255,0.2)';
+      clouds.forEach(c => {
+        ctx.beginPath();
+        ctx.arc(c.x, c.y, 20, 0, Math.PI * 2);
+        ctx.arc(c.x + 15, c.y - 5, 15, 0, Math.PI * 2);
+        ctx.arc(c.x + 30, c.y, 18, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      
+      // Ground
+      ctx.fillStyle = '#4a4a6e';
+      ctx.fillRect(0, GROUND_Y + 20, canvas.width, 2);
+      ctx.fillStyle = '#3a3a5e';
+      ctx.fillRect(0, GROUND_Y + 22, canvas.width, 20);
+      
+      // Dino
+      ctx.fillStyle = '#4CAF50';
+      const bob = Math.floor(legFrame / 5) % 2 === 0 ? 0 : 3;
+      const dinoY = dino.y + (dino.grounded ? -bob : 0);
+      
+      // Body
+      ctx.fillRect(dino.x, dinoY, 30, 35);
+      // Head
+      ctx.fillRect(dino.x + 20, dinoY - 15, 25, 25);
+      // Eye
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(dino.x + 35, dinoY - 8, 5, 5);
+      ctx.fillStyle = '#000';
+      ctx.fillRect(dino.x + 37, dinoY - 6, 2, 2);
+      // Mouth
+      ctx.fillStyle = '#4CAF50';
+      ctx.fillRect(dino.x + 38, dinoY + 2, 8, 3);
+      // Legs
+      ctx.fillStyle = '#4CAF50';
+      if (dino.grounded) {
+        const legOffset = Math.floor(legFrame / 5) % 2 === 0 ? 0 : 8;
+        ctx.fillRect(dino.x + 5 + legOffset, dinoY + 35, 6, 12);
+        ctx.fillRect(dino.x + 20 - legOffset, dinoY + 35, 6, 12);
+      } else {
+        ctx.fillRect(dino.x + 5, dinoY + 30, 6, 12);
+        ctx.fillRect(dino.x + 20, dinoY + 35, 6, 12);
+      }
+      
+      // Obstacles
+      obstacles.forEach(o => {
+        if (o.type === 'cactus') {
+          ctx.fillStyle = '#69f0ae';
+          ctx.fillRect(o.x, o.y, 15, 30);
+          ctx.fillRect(o.x - 8, o.y + 5, 10, 8);
+          ctx.fillRect(o.x + 13, o.y + 10, 10, 8);
+        } else {
+          ctx.fillStyle = '#9e9e9e';
+          ctx.beginPath();
+          ctx.arc(o.x + 15, o.y + 15, 15, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = '#757575';
+          ctx.beginPath();
+          ctx.arc(o.x + 10, o.y + 10, 5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      });
+    }
+    
+    function update() {
+      if (gameOver) return;
+      frame++; legFrame++;
+      
+      // Dino physics
+      dino.velocity += GRAVITY;
+      dino.y += dino.velocity;
+      if (dino.y >= GROUND_Y - 35) {
+        dino.y = GROUND_Y - 35;
+        dino.velocity = 0;
+        dino.grounded = true;
+      }
+      
+      // Spawn obstacles
+      if (frame % Math.floor(1000 / speed) === 0) {
+        obstacles.push({
+          x: canvas.width,
+          y: GROUND_Y - (Math.random() > 0.7 ? 15 : 30),
+          type: Math.random() > 0.7 ? 'bird' : 'cactus',
+          width: 30, height: 30
+        });
+      }
+      
+      // Spawn clouds
+      if (frame % 150 === 0) {
+        clouds.push({ x: canvas.width, y: Math.random() * 60 + 20 });
+      }
+      
+      // Move obstacles
+      obstacles.forEach(o => { o.x -= speed; });
+      obstacles = obstacles.filter(o => o.x > -50);
+      
+      // Move clouds
+      clouds.forEach(c => { c.x -= 1; });
+      clouds = clouds.filter(c => c.x > -50);
+      
+      // Collision
+      obstacles.forEach(o => {
+        if (dino.x + 30 > o.x && dino.x < o.x + o.width &&
+            dino.y + 35 > o.y && dino.y < o.y + o.height) {
+          endGame();
+        }
+      });
+      
+      score = Math.floor(frame / 5);
+      document.getElementById('score').textContent = score;
+      
+      if (frame % 500 === 0) speed += 0.5;
+      
+      draw();
+    }
+    
+    function jump() {
+      if (gameOver) { startGame(); return; }
+      if (dino.grounded) {
+        dino.velocity = JUMP;
+        dino.grounded = false;
+      }
+    }
+    
+    function endGame() {
+      gameOver = true;
+      clearInterval(gameLoop);
+      if (score > highScore) {
+        highScore = score;
+        localStorage.setItem('dinoHigh', highScore);
+        document.getElementById('highScore').textContent = highScore;
+      }
+      setTimeout(() => alert(`💥 撞到了！得分: ${score}`), 100);
+    }
+    
+    function startGame() {
+      if (gameLoop) clearInterval(gameLoop);
+      dino = { x: 50, y: GROUND_Y - 35, velocity: 0, grounded: true };
+      obstacles = []; clouds = [];
+      score = 0; speed = 4; frame = 0; legFrame = 0;
+      gameOver = false;
+      document.getElementById('score').textContent = '0';
+      gameLoop = setInterval(update, 1000/60);
+      draw();
+    }
+    
+    canvas.addEventListener('click', jump);
+    canvas.addEventListener('touchstart', (e) => { e.preventDefault(); jump(); });
+    document.addEventListener('keydown', e => {
+      if (e.code === 'Space') { e.preventDefault(); jump(); }
+    });
+    
+    draw();
+  </script>
+</body>
+</html>

@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
+  <title>太空侵略者</title>
+  <style>
+    * {
+      margin: 0; padding: 0; box-sizing: border-box;
+      touch-action: none;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
+      -webkit-user-drag: none;
+      user-drag: none;
+    }
+    html, body {
+      -webkit-user-select: none !important;
+      -moz-user-select: none !important;
+      -ms-user-select: none !important;
+      user-select: none !important;
+      -webkit-touch-callout: none !important;
+      touch-callout: none !important;
+      -webkit-tap-highlight-color: transparent !important;
+    }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #1a1a2e;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      color: white;
+      overflow: hidden;
+    }
+    h1 { font-size: 1.3rem; margin-bottom: 8px; }
+    .info { display: flex; gap: 30px; margin-bottom: 8px; font-size: 0.9rem; }
+    h1, .info, #gameCanvas, .controls, .mobile-hint, .back-link, #gameContainer {
+      -webkit-user-select: none !important;
+      -moz-user-select: none !important;
+      -ms-user-select: none !important;
+      user-select: none !important;
+    }
+    #gameCanvas {
+      border: 3px solid #444;
+      max-width: 100vw;
+      max-height: 55vh;
+      display: block;
+    }
+    .controls {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+      margin-top: 10px;
+      width: min(360px, 90vw);
+    }
+    .controls button {
+      height: 55px;
+      background: #333; color: white;
+      border: none; border-radius: 10px;
+      font-size: 1.3rem; cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      -webkit-user-select: none;
+      user-select: none;
+      touch-action: manipulation;
+    }
+    .controls button:active { background: #555; }
+    .btn {
+      margin-top: 10px;
+      padding: 12px 35px;
+      background: #4CAF50;
+      border: none;
+      border-radius: 8px;
+      color: white;
+      font-size: 1rem;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      -webkit-user-select: none;
+      user-select: none;
+      touch-action: manipulation;
+      min-width: 150px;
+      font-weight: bold;
+    }
+    .btn:active { background: #45a049; }
+    .start-overlay {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0,0,0,0.85);
+      padding: 30px 40px;
+      border-radius: 15px;
+      text-align: center;
+      border: 2px solid #4CAF50;
+    }
+    .start-overlay h2 {
+      color: #4CAF50;
+      margin-bottom: 15px;
+      font-size: 1.4rem;
+    }
+    .start-overlay p {
+      color: #aaa;
+      font-size: 0.85rem;
+      margin-bottom: 20px;
+    }
+    #gameContainer {
+      position: relative;
+    }
+    .back-link { margin-top: 10px; color: #888; text-decoration: none; font-size: 0.9rem; }
+    .mobile-hint {
+      font-size: 0.75rem;
+      color: #888;
+      margin-top: 5px;
+      display: none;
+    }
+    @media (max-width: 500px) {
+      h1 { font-size: 1.1rem; }
+      .mobile-hint { display: block; }
+    }
+  </style>
+</head>
+<body>
+  <h1>👾 太空侵略者</h1>
+  <div class="info">
+    <span>得分: <strong id="score">0</strong></span>
+    <span>生命: <strong id="lives">3</strong></span>
+  </div>
+  <div id="gameContainer">
+    <canvas id="gameCanvas"></canvas>
+    <div id="startOverlay" class="start-overlay">
+      <h2>👾 太空侵略者</h2>
+      <p>👆 点击按钮开始游戏</p>
+      <button class="btn" id="btnStart">开始游戏</button>
+    </div>
+  </div>
+  <div class="mobile-hint">💡 左右滑动移动，点击屏幕射击</div>
+  <div class="controls">
+    <button id="btnLeft">←</button>
+    <button id="btnFire">射击</button>
+    <button id="btnRight">→</button>
+  </div>
+  <a href="index.html" class="back-link">← 返回游戏列表</a>
+
+  <script>
+    // 阻止长按出现的复制/上下文菜单
+    document.addEventListener('contextmenu', e => e.preventDefault(), true);
+    document.addEventListener('selectstart', e => e.preventDefault(), true);
+
+    // 阻止长滑选中 - 安卓兼容
+    document.addEventListener('touchstart', function(e) {
+      if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+        e.preventDefault();
+      }
+    }, { passive: false, capture: true });
+
+    document.addEventListener('touchmove', function(e) {
+      if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+        e.preventDefault();
+      }
+    }, { passive: false, capture: true });
+
+    document.addEventListener('touchend', function(e) {
+      if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+        // 延迟清除选区
+        if (window.getSelection) {
+          window.getSelection().removeAllRanges();
+        }
+      }
+    }, { passive: false, capture: true });
+
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    // 响应式画布设置
+    const GAME_WIDTH = 400;
+    const GAME_HEIGHT = 450;
+    let scale = 1;
+
+    function resizeCanvas() {
+      const maxWidth = window.innerWidth - 20;
+      const maxHeight = window.innerHeight * 0.55;
+      const scaleX = maxWidth / GAME_WIDTH;
+      const scaleY = maxHeight / GAME_HEIGHT;
+      scale = Math.min(scaleX, scaleY, 1.5);
+
+      canvas.style.width = (GAME_WIDTH * scale) + 'px';
+      canvas.style.height = (GAME_HEIGHT * scale) + 'px';
+      canvas.width = GAME_WIDTH;
+      canvas.height = GAME_HEIGHT;
+    }
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    let player = { x: 200, bullets: [] },
+        enemies = [], enemyBullets = [],
+        score = 0, lives = 3, gameLoop = null, gameOver = false,
+        enemyDir = 1, enemySpeed = 0.5, enemyDrop = false;
+
+    let gameStarted = false;
+
+    // 触摸控制
+    let touchStartX = 0;
+    let isTouching = false;
+
+    canvas.addEventListener('touchstart', handleTouchStart, {passive: false});
+    canvas.addEventListener('touchmove', handleTouchMove, {passive: false});
+    canvas.addEventListener('touchend', handleTouchEnd, {passive: false});
+
+    // 防止页面滚动
+    document.addEventListener('touchmove', function(e) {
+      if (e.target === canvas || e.target.closest('.controls')) {
+        e.preventDefault();
+      }
+    }, {passive: false});
+
+    function handleTouchStart(e) {
+      e.preventDefault();
+      const touch = e.touches[0];
+      touchStartX = touch.clientX;
+      isTouching = true;
+    }
+
+    function handleTouchMove(e) {
+      e.preventDefault();
+      if (!isTouching) return;
+      const touch = e.touches[0];
+      const deltaX = touch.clientX - touchStartX;
+
+      if (Math.abs(deltaX) > 10) {
+        movePlayer(deltaX > 0 ? 1 : -1);
+        touchStartX = touch.clientX;
+      }
+    }
+
+    let lastTapTime = 0;
+    function handleTouchEnd(e) {
+      e.preventDefault();
+      isTouching = false;
+
+      const now = Date.now();
+      if (now - lastTapTime < 300) {
+        // 双击射击
+        fire();
+      }
+      lastTapTime = now;
+
+      // 点击屏幕上半部分射击
+      const touch = e.changedTouches[0];
+      const rect = canvas.getBoundingClientRect();
+      if (touch.clientY < rect.top + rect.height * 0.6) {
+        fire();
+      }
+    }
+
+    function initEnemies() {
+      enemies = [];
+      for (let row = 0; row < 4; row++) {
+        for (let col = 0; col < 8; col++) {
+          enemies.push({
+            x: 50 + col * 40,
+            y: 50 + row * 40,
+            w: 30, h: 25,
+            type: row
+          });
+        }
+      }
+    }
+
+    function draw() {
+      ctx.fillStyle = '#0a0a1a';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Draw stars
+      ctx.fillStyle = '#fff';
+      for (let i = 0; i < 30; i++) {
+        ctx.fillRect((i * 37) % canvas.width, (i * 23) % canvas.height, 2, 2);
+      }
+
+      // Draw player
+      ctx.fillStyle = '#4CAF50';
+      ctx.fillRect(player.x - 20, canvas.height - 40, 40, 25);
+      ctx.fillRect(player.x - 5, canvas.height - 50, 10, 15);
+
+      // Draw bullets
+      ctx.fillStyle = '#ffeb3b';
+      player.bullets.forEach(b => {
+        ctx.fillRect(b.x - 2, b.y, 4, 10);
+      });
+
+      // Draw enemy bullets
+      ctx.fillStyle = '#ff5252';
+      enemyBullets.forEach(b => {
+        ctx.fillRect(b.x - 3, b.y, 6, 10);
+      });
+
+      // Draw enemies
+      enemies.forEach(e => {
+        const colors = ['#ff5252', '#ff9100', '#e040fb', '#448aff'];
+        ctx.fillStyle = colors[e.type];
+        ctx.fillRect(e.x - e.w/2, e.y - e.h/2, e.w, e.h);
+        ctx.fillStyle = '#000';
+        ctx.fillRect(e.x - 8, e.y - 5, 4, 4);
+        ctx.fillRect(e.x + 4, e.y - 5, 4, 4);
+      });
+    }
+
+    function update() {
+      if (gameOver) return;
+
+      // 处理持续按键 - 长按连续移动(每100ms一次)，已处理首次移动在keydown
+      const now = Date.now();
+      if (now - lastMoveTime > 100) {
+        if (keys.left) { movePlayer(-1); lastMoveTime = now; }
+        else if (keys.right) { movePlayer(1); lastMoveTime = now; }
+      }
+
+      // Move bullets
+      player.bullets = player.bullets.filter(b => {
+        b.y -= 6;
+        return b.y > 0;
+      });
+
+      enemyBullets = enemyBullets.filter(b => {
+        b.y += 4;
+        if (b.y > canvas.height - 40 && b.x > player.x - 20 && b.x < player.x + 20) {
+          lives--;
+          document.getElementById('lives').textContent = lives;
+          if (lives <= 0) {
+            gameOver = true;
+            gameStarted = false;
+            clearInterval(gameLoop);
+            setTimeout(() => {
+              alert(`游戏结束！得分: ${score}`);
+              document.getElementById('startOverlay').style.display = 'block';
+              document.querySelector('#startOverlay h2').textContent = '游戏结束';
+              document.querySelector('#startOverlay p').textContent = `得分: ${score}`;
+              document.getElementById('btnStart').textContent = '重新开始';
+            }, 100);
+          }
+          return false;
+        }
+        return b.y < canvas.height;
+      });
+
+      // Move enemies
+      let edgeHit = false;
+      enemies.forEach(e => {
+        e.x += enemyDir * enemySpeed;
+        if (e.x < 25 || e.x > canvas.width - 25) edgeHit = true;
+        if (e.y > canvas.height - 80) {
+          gameOver = true;
+          gameStarted = false;
+          clearInterval(gameLoop);
+          setTimeout(() => {
+            alert(`游戏结束！敌人到达底部！得分: ${score}`);
+            document.getElementById('startOverlay').style.display = 'block';
+            document.querySelector('#startOverlay h2').textContent = '游戏结束';
+            document.querySelector('#startOverlay p').textContent = `得分: ${score}`;
+            document.getElementById('btnStart').textContent = '重新开始';
+          }, 100);
+        }
+      });
+
+      if (edgeHit) {
+        enemyDir *= -1;
+        enemies.forEach(e => e.y += 20);
+        enemySpeed += 0.1;
+      }
+
+      // Enemy shoot
+      if (Math.random() < 0.02 && enemies.length > 0) {
+        const shooter = enemies[Math.floor(Math.random() * enemies.length)];
+        enemyBullets.push({ x: shooter.x, y: shooter.y + 20 });
+      }
+
+      // Collision detection
+      player.bullets.forEach((b, bi) => {
+        enemies.forEach((e, ei) => {
+          if (Math.abs(b.x - e.x) < e.w/2 && Math.abs(b.y - e.y) < e.h/2) {
+            enemies.splice(ei, 1);
+            player.bullets.splice(bi, 1);
+            score += [40, 30, 20, 10][e.type];
+            document.getElementById('score').textContent = score;
+          }
+        });
+      });
+
+      if (enemies.length === 0) {
+        initEnemies();
+        enemySpeed += 0.5;
+      }
+
+      draw();
+    }
+
+    function movePlayer(dir) {
+      player.x += dir * 20;
+      player.x = Math.max(25, Math.min(canvas.width - 25, player.x));
+    }
+
+    function fire() {
+      if (gameOver) return;
+      player.bullets.push({ x: player.x, y: canvas.height - 55 });
+    }
+
+    function startGame() {
+      gameStarted = true;
+      document.getElementById('startOverlay').style.display = 'none';
+
+      if (gameLoop) clearInterval(gameLoop);
+      initEnemies();
+      player = { x: 200, bullets: [] };
+      enemyBullets = [];
+      score = 0; lives = 3; gameOver = false;
+      enemyDir = 1; enemySpeed = 0.5;
+      document.getElementById('score').textContent = '0';
+      document.getElementById('lives').textContent = '3';
+      gameLoop = setInterval(update, 1000/60);
+      draw();
+    }
+
+    // 键盘控制 - 追踪按键状态实现同时移动和射击
+    const keys = { left: false, right: false, space: false };
+    let lastMoveTime = 0;
+
+    document.addEventListener('keydown', e => {
+      if (gameOver) return;
+      switch(e.key) {
+        case 'ArrowLeft': case 'a': case 'A':
+          e.preventDefault();
+          if (!keys.left) movePlayer(-1); // 首次按下立即移动
+          keys.left = true;
+          break;
+        case 'ArrowRight': case 'd': case 'D':
+          e.preventDefault();
+          if (!keys.right) movePlayer(1); // 首次按下立即移动
+          keys.right = true;
+          break;
+        case ' ': case 'ArrowUp': case 'w': case 'W':
+          e.preventDefault();
+          if (!keys.space) fire(); // 防止按住连发
+          keys.space = true;
+          break;
+      }
+    });
+
+    document.addEventListener('keyup', e => {
+      switch(e.key) {
+        case 'ArrowLeft': case 'a': case 'A': keys.left = false; break;
+        case 'ArrowRight': case 'd': case 'D': keys.right = false; break;
+        case ' ': case 'ArrowUp': case 'w': case 'W': keys.space = false; break;
+      }
+    });
+
+    // 按钮事件 - 同时支持触摸和鼠标
+    const btnStart = document.getElementById('btnStart');
+    const btnLeft = document.getElementById('btnLeft');
+    const btnRight = document.getElementById('btnRight');
+    const btnFire = document.getElementById('btnFire');
+
+    // 开始按钮
+    btnStart.addEventListener('click', startGame);
+    btnStart.addEventListener('touchend', (e) => { e.preventDefault(); startGame(); });
+
+    // 方向按钮
+    btnLeft.addEventListener('touchstart', (e) => { e.preventDefault(); if(gameStarted) movePlayer(-1); });
+    btnLeft.addEventListener('mousedown', () => { if(gameStarted) movePlayer(-1); });
+
+    btnRight.addEventListener('touchstart', (e) => { e.preventDefault(); if(gameStarted) movePlayer(1); });
+    btnRight.addEventListener('mousedown', () => { if(gameStarted) movePlayer(1); });
+
+    // 射击按钮
+    btnFire.addEventListener('touchstart', (e) => { e.preventDefault(); if(gameStarted) fire(); });
+    btnFire.addEventListener('mousedown', () => { if(gameStarted) fire(); });
+
+    // 画布触摸事件 - 只在游戏开始后生效
+    function handleTouchStart(e) {
+      if (!gameStarted) return;
+      e.preventDefault();
+      const touch = e.touches[0];
+      touchStartX = touch.clientX;
+      isTouching = true;
+    }
+
+    function handleTouchMove(e) {
+      if (!gameStarted) return;
+      e.preventDefault();
+      if (!isTouching) return;
+      const touch = e.touches[0];
+      const deltaX = touch.clientX - touchStartX;
+
+      if (Math.abs(deltaX) > 10) {
+        movePlayer(deltaX > 0 ? 1 : -1);
+        touchStartX = touch.clientX;
+      }
+    }
+
+    function handleTouchEnd(e) {
+      if (!gameStarted) {
+        // 游戏未开始时，点击画布也可以开始游戏
+        e.preventDefault();
+        startGame();
+        return;
+      }
+      e.preventDefault();
+      isTouching = false;
+
+      const now = Date.now();
+      if (now - lastTapTime < 300) {
+        fire();
+      }
+      lastTapTime = now;
+
+      const touch = e.changedTouches[0];
+      const rect = canvas.getBoundingClientRect();
+      if (touch.clientY < rect.top + rect.height * 0.6) {
+        fire();
+      }
+    }
+
+    initEnemies();
+    draw();
+  </script>
+</body>
+</html>

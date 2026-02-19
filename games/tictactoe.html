@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>井字棋</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #1a1a2e;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+      min-height: 100vh;
+      color: white;
+    }
+    h1 { font-size: 1.5rem; margin-bottom: 10px; }
+    .score { display: flex; gap: 30px; margin-bottom: 15px; }
+    .board {
+      display: grid;
+      grid-template-columns: repeat(3, 100px);
+      gap: 5px;
+      background: #444;
+      padding: 5px;
+      border-radius: 10px;
+    }
+    .cell {
+      width: 100px; height: 100px;
+      background: #2a2a4e;
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 3rem; cursor: pointer;
+      transition: background 0.2s;
+      user-select: none;
+    }
+    .cell:hover:not(.taken) { background: #3a3a5e; }
+    .cell.taken { cursor: default; }
+    .cell.win { background: #4CAF50; animation: pulse 1s infinite; }
+    @keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+    .controls { display: flex; gap: 10px; margin-top: 15px; }
+    .btn { padding: 10px 20px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer; }
+    .btn:hover { background: #45a049; }
+    .back-link { margin-top: 15px; color: #888; text-decoration: none; }
+    @media (max-width: 350px) {
+      .board { grid-template-columns: repeat(3, 85px); }
+      .cell { width: 85px; height: 85px; font-size: 2.5rem; }
+    }
+  </style>
+</head>
+<body>
+  <h1>⭕ 井字棋 ❌</h1>
+  <div class="score">
+    <span>玩家: <strong id="playerScore">0</strong></span>
+    <span>平局: <strong id="drawScore">0</strong></span>
+    <span>电脑: <strong id="aiScore">0</strong></span>
+  </div>
+  <div class="board" id="board"></div>
+  <div class="controls">
+    <button class="btn" onclick="newGame()">新游戏</button>
+  </div>
+  <a href="index.html" class="back-link">← 返回游戏列表</a>
+
+  <script>
+    let board = [], current = 'X', gameOver = false;
+    let scores = { player: 0, draw: 0, ai: 0 };
+
+    function initBoard() {
+      board = Array(9).fill(null);
+      current = 'X';
+      gameOver = false;
+      render();
+    }
+
+    function render() {
+      const container = document.getElementById('board');
+      container.innerHTML = '';
+      const wins = checkWinner();
+      
+      for (let i = 0; i < 9; i++) {
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+        if (board[i]) {
+          cell.textContent = board[i];
+          cell.classList.add('taken');
+        }
+        if (wins?.includes(i)) cell.classList.add('win');
+        cell.onclick = () => makeMove(i);
+        container.appendChild(cell);
+      }
+    }
+
+    function makeMove(i) {
+      if (gameOver || board[i]) return;
+      board[i] = current;
+      render();
+      
+      const winner = checkWinner();
+      if (winner) {
+        gameOver = true;
+        if (winner === 'X') scores.player++;
+        else scores.ai++;
+        updateScores();
+        setTimeout(() => alert(winner === 'X' ? '🎉 你赢了！' : '💻 电脑赢了！'), 100);
+      } else if (board.every(c => c)) {
+        gameOver = true;
+        scores.draw++;
+        updateScores();
+        setTimeout(() => alert('🤝 平局！'), 100);
+      } else {
+        current = current === 'X' ? 'O' : 'X';
+        if (current === 'O') setTimeout(aiMove, 300);
+      }
+    }
+
+    function aiMove() {
+      if (gameOver) return;
+      
+      // Try to win
+      for (let i = 0; i < 9; i++) {
+        if (!board[i]) {
+          board[i] = 'O';
+          if (checkWinner()) { makeMove(i); return; }
+          board[i] = null;
+        }
+      }
+      
+      // Block player
+      for (let i = 0; i < 9; i++) {
+        if (!board[i]) {
+          board[i] = 'X';
+          if (checkWinner()) { board[i] = null; makeMove(i); return; }
+          board[i] = null;
+        }
+      }
+      
+      // Take center
+      if (!board[4]) { makeMove(4); return; }
+      
+      // Take corner
+      const corners = [0, 2, 6, 8].filter(i => !board[i]);
+      if (corners.length > 0) { makeMove(corners[Math.floor(Math.random() * corners.length)]); return; }
+      
+      // Random
+      const empty = board.map((c, i) => c ? null : i).filter(i => i !== null);
+      if (empty.length > 0) makeMove(empty[Math.floor(Math.random() * empty.length)]);
+    }
+
+    function checkWinner() {
+      const wins = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+      for (const [a, b, c] of wins) {
+        if (board[a] && board[a] === board[b] && board[a] === board[c]) return [a, b, c];
+      }
+      return null;
+    }
+
+    function updateScores() {
+      document.getElementById('playerScore').textContent = scores.player;
+      document.getElementById('drawScore').textContent = scores.draw;
+      document.getElementById('aiScore').textContent = scores.ai;
+    }
+
+    function newGame() { initBoard(); }
+
+    initBoard();
+  </script>
+</body>
+</html>

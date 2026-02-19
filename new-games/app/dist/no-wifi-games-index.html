@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="30+ classic games you can play offline - no WiFi needed!">
+  <meta name="theme-color" content="#16213e">
+  
+  <title>No WiFi Games - Play Offline</title>
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="icons/icon-72x72.png">
+  <link rel="apple-touch-icon" href="icons/icon-192x192.png">
+  
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="manifest.json">
+  
+  <!-- Styles -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- Header -->
+  <header>
+    <div class="header-content">
+      <a href="/" class="logo">
+        <div class="logo-icon">🎮</div>
+        <span class="logo-text">No WiFi Games</span>
+      </a>
+      
+      <nav>
+        <ul class="nav-links">
+          <li><a href="#" class="active">Games</a></li>
+          <li><a href="#about">About</a></li>
+        </ul>
+      </nav>
+      
+      <button id="install-btn" class="hidden">📲 Install App</button>
+    </div>
+  </header>
+  
+  <!-- Main Content -->
+  <main>
+    <!-- Hero Section -->
+    <section class="hero">
+      <h1>30+ Games, Zero WiFi Needed</h1>
+      <p>Play classic games anytime, anywhere. All games work completely offline - perfect for flights, commutes, or when your connection fails you.</p>
+    </section>
+    
+    <!-- Filter Section -->
+    <section class="filter-section">
+      <div class="search-box">
+        <input type="text" id="search-input" placeholder="Search games...">
+      </div>
+      
+      <div class="category-filter">
+        <button class="category-btn active" data-category="all">All</button>
+        <button class="category-btn" data-category="puzzle">🧩 Puzzle</button>
+        <button class="category-btn" data-category="action">⚡ Action</button>
+        <button class="category-btn" data-category="casual">☕ Casual</button>
+        <button class="category-btn" data-category="classic">🎲 Classic</button>
+      </div>
+    </section>
+    
+    <!-- Games Grid -->
+    <section id="games-grid" class="games-grid">
+      <!-- Games will be rendered here by JavaScript -->
+    </section>
+    
+    <!-- About Section -->
+    <section id="about" style="padding: 4rem 0; text-align: center; border-top: 1px solid rgba(255,255,255,0.05);">
+      <h2 style="font-size: 2rem; margin-bottom: 1rem;">About No WiFi Games</h2>
+      <p style="color: var(--text-muted); max-width: 800px; margin: 0 auto; line-height: 1.8;">
+        This collection features 30+ classic games built with pure HTML5, CSS, and JavaScript. 
+        No internet connection required, no ads, no tracking - just pure gaming fun. 
+        Install as a PWA on your phone or play directly in your browser.
+      </p>
+      <div style="margin-top: 2rem; display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+        <span style="background: var(--bg-card); padding: 0.5rem 1rem; border-radius: 20px;">📱 Mobile Friendly</span>
+        <span style="background: var(--bg-card); padding: 0.5rem 1rem; border-radius: 20px;">💾 Works Offline</span>
+        <span style="background: var(--bg-card); padding: 0.5rem 1rem; border-radius: 20px;">🆓 100% Free</span>
+        <span style="background: var(--bg-card); padding: 0.5rem 1rem; border-radius: 20px;">🚫 No Ads</span>
+      </div>
+    </section>
+  </main>
+  
+  <!-- Footer -->
+  <footer>
+    <p>Made with ❤️ for offline gaming | No WiFi Games</p>
+  </footer>
+  
+  <!-- Game Modal -->
+  <div id="game-modal" class="game-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="modal-title">Game Title</h2>
+        <button class="modal-close">✕</button>
+      </div>
+      <div class="game-container">
+        <iframe id="game-frame" allowfullscreen></iframe>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Offline Indicator -->
+  <div id="offline-indicator" class="offline-indicator">
+    📴 You're offline - Games still work!
+  </div>
+  
+  <!-- Scripts -->
+  <script src="js/main.js"></script>
+</body>
+</html>

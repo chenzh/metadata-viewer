@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>吃豆人</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #1a1a2e;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+      min-height: 100vh;
+      color: white;
+    }
+    h1 { font-size: 1.5rem; margin-bottom: 10px; }
+    .info { display: flex; gap: 30px; margin-bottom: 10px; }
+    #gameCanvas { border: 3px solid #444; }
+    .controls {
+      display: grid;
+      grid-template-columns: repeat(3, 60px);
+      gap: 8px;
+      margin-top: 15px;
+    }
+    .controls button {
+      width: 60px; height: 50px;
+      background: #333; color: white;
+      border: none; border-radius: 8px;
+      font-size: 1.2rem; cursor: pointer;
+    }
+    .btn { margin-top: 15px; padding: 10px 25px; background: #4CAF50; border: none; border-radius: 5px; color: white; cursor: pointer; }
+    .back-link { margin-top: 15px; color: #888; text-decoration: none; }
+    @media (max-width: 400px) { #gameCanvas { width: 350px; height: 400px; } }
+  </style>
+</head>
+<body>
+  <h1>🟡 吃豆人</h1>
+  <div class="info">
+    <span>得分: <strong id="score">0</strong></span>
+    <span>生命: <strong id="lives">3</strong></span>
+  </div>
+  <canvas id="gameCanvas" width="400" height="420"></canvas>
+  <div class="controls">
+    <button style="grid-column: 2;" onclick="setDir(0, -1)">↑</button>
+    <button onclick="setDir(-1, 0)">←</button>
+    <button onclick="setDir(1, 0)">→</button>
+    <button style="grid-column: 2;" onclick="setDir(0, 1)">↓</button>
+  </div>
+  <button class="btn" onclick="startGame()">开始游戏</button>
+  <a href="index.html" class="back-link">← 返回游戏列表</a>
+
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const TILE = 20;
+    
+    const MAP = [
+      "####################",
+      "#........##........#",
+      "#.####.#.##.#.####.#",
+      "#o#  #.#.##.#.#  #o#",
+      "#.####.#.##.#.####.#",
+      "#..................#",
+      "#.##.###..###.##..##",
+      "#....#......#......#",
+      "####.#.####.#.######",
+      "   #.#.#GG#.#.#     ",
+      "####.#.#GG#.#.######",
+      "#......#..#........#",
+      "#.####.##.##.####..#",
+      "#o............. ...o#",
+      "#.####.## ##.####..#",
+      "#......#  #........#",
+      "####################"
+    ];
+    
+    let pacman = { x: 9, y: 13, dir: { x: 0, y: 0 }, nextDir: { x: 0, y: 0 }, mouth: 0 },
+        ghosts = [], dots = [], powerDots = [],
+        score = 0, lives = 3, gameLoop = null, gameOver = false,
+        powered = 0, frame = 0;
+    
+    function init() {
+      dots = []; powerDots = [];
+      for (let y = 0; y < MAP.length; y++) {
+        for (let x = 0; x < MAP[y].length; x++) {
+          if (MAP[y][x] === '.') dots.push({ x, y });
+          if (MAP[y][x] === 'o') powerDots.push({ x, y });
+        }
+      }
+      ghosts = [
+        { x: 9, y: 7, color: '#ff5252', dir: { x: 0, y: -1 } },
+        { x: 10, y: 7, color: '#ff9100', dir: { x: 0, y: -1 } },
+        { x: 9, y: 8, color: '#e040fb', dir: { x: -1, y: 0 } },
+        { x: 10, y: 8, color: '#00f5ff', dir: { x: 1, y: 0 } }
+      ];
+    }
+    
+    function draw() {
+      ctx.fillStyle = '#0a0a1a';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      // Walls
+      ctx.fillStyle = '#448aff';
+      for (let y = 0; y < MAP.length; y++) {
+        for (let x = 0; x < MAP[y].length; x++) {
+          if (MAP[y][x] === '#') {
+            ctx.fillRect(x * TILE, y * TILE, TILE, TILE);
+          }
+        }
+      }
+      
+      // Dots
+      ctx.fillStyle = '#ffeb3b';
+      dots.forEach(d => {
+        ctx.beginPath();
+        ctx.arc(d.x * TILE + TILE/2, d.y * TILE + TILE/2, 3, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      
+      // Power dots
+      ctx.fillStyle = '#ffeb3b';
+      powerDots.forEach(d => {
+        ctx.beginPath();
+        ctx.arc(d.x * TILE + TILE/2, d.y * TILE + TILE/2, Math.sin(frame * 0.1) * 3 + 6, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      
+      // Pacman
+      const px = pacman.x * TILE + TILE/2;
+      const py = pacman.y * TILE + TILE/2;
+      ctx.fillStyle = '#ffeb3b';
+      ctx.beginPath();
+      let angle = 0;
+      if (pacman.dir.x > 0) angle = 0;
+      else if (pacman.dir.x < 0) angle = Math.PI;
+      else if (pacman.dir.y > 0) angle = Math.PI / 2;
+      else if (pacman.dir.y < 0) angle = -Math.PI / 2;
+      const mouth = Math.abs(Math.sin(pacman.mouth)) * 0.3;
+      ctx.arc(px, py, TILE/2 - 1, angle + mouth, angle - mouth + Math.PI * 2);
+      ctx.fill();
+      
+      // Ghosts
+      ghosts.forEach(g => {
+        const gx = g.x * TILE + TILE/2;
+        const gy = g.y * TILE + TILE/2;
+        ctx.fillStyle = powered > 0 ? '#448aff' : g.color;
+        ctx.beginPath();
+        ctx.arc(gx, gy - 3, TILE/2 - 2, Math.PI, 0);
+        ctx.fill();
+        ctx.fillRect(gx - TILE/2 + 2, gy - 3, TILE - 4, TILE/2);
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.arc(gx - 4, gy - 5, 3, 0, Math.PI * 2);
+        ctx.arc(gx + 4, gy - 5, 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#000';
+        ctx.beginPath();
+        ctx.arc(gx - 4 + g.dir.x * 2, gy - 5 + g.dir.y * 2, 1.5, 0, Math.PI * 2);
+        ctx.arc(gx + 4 + g.dir.x * 2, gy - 5 + g.dir.y * 2, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    }
+    
+    function canMove(x, y) {
+      if (y < 0 || y >= MAP.length || x < 0 || x >= MAP[0].length) return false;
+      return MAP[y][x] !== '#';
+    }
+    
+    function update() {
+      if (gameOver) return;
+      frame++;
+      if (powered > 0) powered--;
+      
+      // Move pacman
+      if (canMove(pacman.x + pacman.nextDir.x, pacman.y + pacman.nextDir.y)) {
+        pacman.dir = { ...pacman.nextDir };
+      }
+      if (canMove(pacman.x + pacman.dir.x, pacman.y + pacman.dir.y)) {
+        pacman.x += pacman.dir.x;
+        pacman.y += pacman.dir.y;
+        pacman.mouth += 0.2;
+      }
+      
+      // Eat dots
+      const dotIdx = dots.findIndex(d => d.x === pacman.x && d.y === pacman.y);
+      if (dotIdx >= 0) {
+        dots.splice(dotIdx, 1);
+        score += 10;
+      }
+      const powerIdx = powerDots.findIndex(d => d.x === pacman.x && d.y === pacman.y);
+      if (powerIdx >= 0) {
+        powerDots.splice(powerIdx, 1);
+        score += 50;
+        powered = 300;
+      }
+      
+      // Move ghosts
+      ghosts.forEach(g => {
+        const dirs = [{ x: 0, y: -1 }, { x: 0, y: 1 }, { x: -1, y: 0 }, { x: 1, y: 0 }];
+        const valid = dirs.filter(d => canMove(g.x + d.x, g.y + d.y) && !(d.x === -g.dir.x && d.y === -g.dir.y));
+        if (valid.length > 0) {
+          const target = dirs[Math.floor(Math.random() * dirs.length)];
+          g.dir = valid[Math.floor(Math.random() * valid.length)];
+        }
+        g.x += g.dir.x;
+        g.y += g.dir.y;
+        
+        // Collision
+        if (Math.abs(g.x - pacman.x) < 1 && Math.abs(g.y - pacman.y) < 1) {
+          if (powered > 0) {
+            score += 200;
+            g.x = 9; g.y = 7;
+          } else {
+            lives--;
+            document.getElementById('lives').textContent = lives;
+            if (lives <= 0) {
+              gameOver = true;
+              clearInterval(gameLoop);
+              alert(`游戏结束！得分: ${score}`);
+            } else {
+              pacman = { x: 9, y: 13, dir: { x: 0, y: 0 }, nextDir: { x: 0, y: 0 }, mouth: 0 };
+            }
+          }
+        }
+      });
+      
+      if (dots.length === 0 && powerDots.length === 0) {
+        gameOver = true;
+        clearInterval(gameLoop);
+        alert(`🎉 恭喜通关！得分: ${score}`);
+      }
+      
+      document.getElementById('score').textContent = score;
+      draw();
+    }
+    
+    function setDir(x, y) {
+      pacman.nextDir = { x, y };
+    }
+    
+    document.addEventListener('keydown', e => {
+      switch(e.key) {
+        case 'ArrowUp': case 'w': e.preventDefault(); setDir(0, -1); break;
+        case 'ArrowDown': case 's': e.preventDefault(); setDir(0, 1); break;
+        case 'ArrowLeft': case 'a': e.preventDefault(); setDir(-1, 0); break;
+        case 'ArrowRight': case 'd': e.preventDefault(); setDir(1, 0); break;
+      }
+    });
+    
+    function startGame() {
+      if (gameLoop) clearInterval(gameLoop);
+      init();
+      pacman = { x: 9, y: 13, dir: { x: 0, y: 0 }, nextDir: { x: 0, y: 0 }, mouth: 0 };
+      score = 0; lives = 3; gameOver = false; powered = 0; frame = 0;
+      document.getElementById('score').textContent = '0';
+      document.getElementById('lives').textContent = '3';
+      gameLoop = setInterval(update, 1000/10);
+      draw();
+    }
+    
+    init();
+    draw();
+  </script>
+</body>
+</html>

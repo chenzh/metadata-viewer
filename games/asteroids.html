@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
+    <title>小行星 - No WiFi Games</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; touch-action: none; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #000;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: white;
+            overflow: hidden;
+            user-select: none;
+        }
+        .back-btn {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            color: #e94560;
+            text-decoration: none;
+            font-size: 1rem;
+            z-index: 10;
+        }
+        #gameCanvas {
+            border: 2px solid #333;
+            background: radial-gradient(ellipse at center, #1a1a2e 0%, #000 100%);
+            max-width: 100vw;
+            max-height: 55vh;
+        }
+        .ui {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            text-align: right;
+            z-index: 10;
+        }
+        .score { font-size: 1.5rem; color: #e94560; }
+        .lives { font-size: 1.2rem; color: #4caf50; }
+        .controls-hint {
+            position: absolute;
+            bottom: 120px;
+            text-align: center;
+            color: #666;
+            font-size: 0.8rem;
+            z-index: 10;
+        }
+        .touch-controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: grid;
+            grid-template-columns: 70px 70px 70px 70px;
+            gap: 10px;
+            z-index: 10;
+        }
+        .touch-controls button {
+            width: 70px;
+            height: 60px;
+            background: rgba(255,255,255,0.1);
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 10px;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+            user-select: none;
+        }
+        .touch-controls button:active {
+            background: rgba(233, 69, 96, 0.5);
+            border-color: #e94560;
+        }
+        .touch-controls .fire-btn {
+            background: rgba(233, 69, 96, 0.2);
+            border-color: rgba(233, 69, 96, 0.5);
+        }
+        .game-over, .start-screen {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            background: rgba(0,0,0,0.9);
+            padding: 40px;
+            border-radius: 20px;
+            z-index: 20;
+        }
+        .game-over { display: none; }
+        .start-screen h2, .game-over h2 { font-size: 2rem; margin-bottom: 15px; color: #e94560; }
+        .start-screen p, .game-over p { font-size: 1rem; margin-bottom: 25px; color: #888; }
+        .start-screen button, .game-over button {
+            padding: 15px 40px;
+            background: #e94560;
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-size: 1.2rem;
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+        }
+        @media (max-width: 500px) {
+            .touch-controls { grid-template-columns: 65px 65px 65px 65px; }
+            .touch-controls button { width: 65px; height: 55px; font-size: 1.3rem; }
+            .controls-hint { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <a href="index.html" class="back-btn">← 返回</a>
+    <div class="ui">
+        <div class="score">得分: <span id="score">0</span></div>
+        <div class="lives">生命: <span id="lives">3</span></div>
+    </div>
+    <canvas id="gameCanvas"></canvas>
+    <div class="controls-hint">← → 旋转 | ↑ 推进 | 空格/点击 射击</div>
+    <div class="touch-controls">
+        <button id="btnLeft">↺</button>
+        <button id="btnThrust">⬆</button>
+        <button id="btnRight">↻</button>
+        <button id="btnFire" class="fire-btn">🔥</button>
+    </div>
+    <div class="start-screen" id="startScreen">
+        <h2>☄️ 小行星</h2>
+        <p>摧毁小行星，保卫飞船！<br>手机：使用下方按钮控制</p>
+        <button id="btnStart">开始游戏</button>
+    </div>
+    <div class="game-over" id="gameOver">
+        <h2>游戏结束</h2>
+        <p>最终得分: <span id="finalScore">0</span></p>
+        <button id="btnRestart">重新开始</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // 响应式画布
+        const GAME_WIDTH = 800;
+        const GAME_HEIGHT = 600;
+        
+        function resizeCanvas() {
+            const maxWidth = window.innerWidth - 20;
+            const maxHeight = window.innerHeight * 0.55;
+            const scaleX = maxWidth / GAME_WIDTH;
+            const scaleY = maxHeight / GAME_HEIGHT;
+            const scale = Math.min(scaleX, scaleY, 1);
+            
+            canvas.style.width = (GAME_WIDTH * scale) + 'px';
+            canvas.style.height = (GAME_HEIGHT * scale) + 'px';
+            canvas.width = GAME_WIDTH;
+            canvas.height = GAME_HEIGHT;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+        
+        let ship, asteroids, bullets, particles, score, lives, gameLoop, keys;
+        let gameStarted = false;
+        let touchState = { left: false, right: false, thrust: false };
+        
+        class Ship {
+            constructor() {
+                this.x = canvas.width / 2;
+                this.y = canvas.height / 2;
+                this.angle = -Math.PI / 2;
+                this.velocity = { x: 0, y: 0 };
+                this.radius = 15;
+                this.thrust = false;
+            }
+            
+            update() {
+                // 键盘控制
+                if (keys['ArrowLeft']) this.angle -= 0.1;
+                if (keys['ArrowRight']) this.angle += 0.1;
+                if (keys['ArrowUp']) {
+                    this.thrust = true;
+                    this.velocity.x += Math.cos(this.angle) * 0.3;
+                    this.velocity.y += Math.sin(this.angle) * 0.3;
+                } else {
+                    this.thrust = false;
+                }
+                
+                // 触摸控制
+                if (touchState.left) this.angle -= 0.1;
+                if (touchState.right) this.angle += 0.1;
+                if (touchState.thrust) {
+                    this.thrust = true;
+                    this.velocity.x += Math.cos(this.angle) * 0.3;
+                    this.velocity.y += Math.sin(this.angle) * 0.3;
+                } else if (!keys['ArrowUp']) {
+                    this.thrust = false;
+                }
+                
+                this.x += this.velocity.x;
+                this.y += this.velocity.y;
+                this.velocity.x *= 0.98;
+                this.velocity.y *= 0.98;
+                
+                if (this.x < 0) this.x = canvas.width;
+                if (this.x > canvas.width) this.x = 0;
+                if (this.y < 0) this.y = canvas.height;
+                if (this.y > canvas.height) this.y = 0;
+            }
+            
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.angle);
+                
+                ctx.beginPath();
+                ctx.moveTo(20, 0);
+                ctx.lineTo(-15, 12);
+                ctx.lineTo(-10, 0);
+                ctx.lineTo(-15, -12);
+                ctx.closePath();
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                if (this.thrust) {
+                    ctx.beginPath();
+                    ctx.moveTo(-12, 0);
+                    ctx.lineTo(-25 - Math.random() * 10, 0);
+                    ctx.strokeStyle = '#e94560';
+                    ctx.lineWidth = 3;
+                    ctx.stroke();
+                }
+                
+                ctx.restore();
+            }
+        }
+        
+        class Asteroid {
+            constructor(x, y, size) {
+                this.x = x || Math.random() * canvas.width;
+                this.y = y || Math.random() * canvas.height;
+                this.size = size || 40;
+                this.velocity = {
+                    x: (Math.random() - 0.5) * 2,
+                    y: (Math.random() - 0.5) * 2
+                };
+                this.vertices = [];
+                for (let i = 0; i < 8; i++) {
+                    this.vertices.push(0.7 + Math.random() * 0.6);
+                }
+            }
+            
+            update() {
+                this.x += this.velocity.x;
+                this.y += this.velocity.y;
+                if (this.x < 0) this.x = canvas.width;
+                if (this.x > canvas.width) this.x = 0;
+                if (this.y < 0) this.y = canvas.height;
+                if (this.y > canvas.height) this.y = 0;
+            }
+            
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.beginPath();
+                for (let i = 0; i < this.vertices.length; i++) {
+                    const angle = (i / this.vertices.length) * Math.PI * 2;
+                    const r = this.size * this.vertices[i];
+                    const x = Math.cos(angle) * r;
+                    const y = Math.sin(angle) * r;
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.closePath();
+                ctx.strokeStyle = '#888';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                ctx.restore();
+            }
+        }
+        
+        class Bullet {
+            constructor(x, y, angle) {
+                this.x = x;
+                this.y = y;
+                this.velocity = {
+                    x: Math.cos(angle) * 8,
+                    y: Math.sin(angle) * 8
+                };
+                this.life = 60;
+            }
+            
+            update() {
+                this.x += this.velocity.x;
+                this.y += this.velocity.y;
+                this.life--;
+            }
+            
+            draw() {
+                ctx.fillStyle = '#e94560';
+                ctx.fillRect(this.x - 2, this.y - 2, 4, 4);
+            }
+        }
+        
+        class Particle {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.velocity = {
+                    x: (Math.random() - 0.5) * 5,
+                    y: (Math.random() - 0.5) * 5
+                };
+                this.life = 30;
+            }
+            
+            update() {
+                this.x += this.velocity.x;
+                this.y += this.velocity.y;
+                this.life--;
+            }
+            
+            draw() {
+                ctx.fillStyle = `rgba(233, 69, 96, ${this.life / 30})`;
+                ctx.fillRect(this.x - 1, this.y - 1, 2, 2);
+            }
+        }
+        
+        function fire() {
+            if (!gameStarted) return;
+            bullets.push(new Bullet(
+                ship.x + Math.cos(ship.angle) * 20,
+                ship.y + Math.sin(ship.angle) * 20,
+                ship.angle
+            ));
+        }
+        
+        function initGame() {
+            ship = new Ship();
+            asteroids = [];
+            bullets = [];
+            particles = [];
+            score = 0;
+            lives = 3;
+            keys = {};
+            gameStarted = true;
+            touchState = { left: false, right: false, thrust: false };
+            
+            for (let i = 0; i < 5; i++) {
+                asteroids.push(new Asteroid());
+            }
+            
+            document.getElementById('score').textContent = score;
+            document.getElementById('lives').textContent = lives;
+            document.getElementById('gameOver').style.display = 'none';
+            document.getElementById('startScreen').style.display = 'none';
+            
+            if (gameLoop) cancelAnimationFrame(gameLoop);
+            gameLoop = requestAnimationFrame(update);
+        }
+        
+        function update() {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            ship.update();
+            ship.draw();
+            
+            bullets = bullets.filter(b => b.life > 0);
+            bullets.forEach(b => { b.update(); b.draw(); });
+            
+            asteroids.forEach(a => { a.update(); a.draw(); });
+            
+            particles = particles.filter(p => p.life > 0);
+            particles.forEach(p => { p.update(); p.draw(); });
+            
+            checkCollisions();
+            
+            if (asteroids.length === 0) {
+                for (let i = 0; i < 5; i++) asteroids.push(new Asteroid());
+            }
+            
+            gameLoop = requestAnimationFrame(update);
+        }
+        
+        function checkCollisions() {
+            bullets.forEach((bullet, bi) => {
+                asteroids.forEach((asteroid, ai) => {
+                    const dx = bullet.x - asteroid.x;
+                    const dy = bullet.y - asteroid.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (dist < asteroid.size) {
+                        bullets.splice(bi, 1);
+                        asteroids.splice(ai, 1);
+                        score += 10;
+                        document.getElementById('score').textContent = score;
+                        
+                        for (let i = 0; i < 10; i++) {
+                            particles.push(new Particle(asteroid.x, asteroid.y));
+                        }
+                        
+                        if (asteroid.size > 20) {
+                            asteroids.push(new Asteroid(asteroid.x, asteroid.y, asteroid.size / 2));
+                            asteroids.push(new Asteroid(asteroid.x, asteroid.y, asteroid.size / 2));
+                        }
+                    }
+                });
+            });
+            
+            asteroids.forEach(asteroid => {
+                const dx = ship.x - asteroid.x;
+                const dy = ship.y - asteroid.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                
+                if (dist < asteroid.size + ship.radius) {
+                    lives--;
+                    document.getElementById('lives').textContent = lives;
+                    
+                    for (let i = 0; i < 20; i++) {
+                        particles.push(new Particle(ship.x, ship.y));
+                    }
+                    
+                    if (lives <= 0) {
+                        gameStarted = false;
+                        document.getElementById('finalScore').textContent = score;
+                        document.getElementById('gameOver').style.display = 'block';
+                        cancelAnimationFrame(gameLoop);
+                    } else {
+                        ship.x = canvas.width / 2;
+                        ship.y = canvas.height / 2;
+                        ship.velocity = { x: 0, y: 0 };
+                    }
+                }
+            });
+        }
+        
+        // 键盘控制
+        document.addEventListener('keydown', (e) => {
+            keys[e.key] = true;
+            if ((e.key === ' ' || e.key === 'ArrowUp') && !e.repeat) {
+                if (!gameStarted) {
+                    initGame();
+                } else {
+                    fire();
+                }
+            }
+        });
+        document.addEventListener('keyup', (e) => keys[e.key] = false);
+        
+        // 触摸按钮控制
+        const btnLeft = document.getElementById('btnLeft');
+        const btnRight = document.getElementById('btnRight');
+        const btnThrust = document.getElementById('btnThrust');
+        const btnFire = document.getElementById('btnFire');
+        
+        function setupTouchBtn(btn, key) {
+            const startHandler = (e) => {
+                e.preventDefault();
+                touchState[key] = true;
+            };
+            const endHandler = (e) => {
+                e.preventDefault();
+                touchState[key] = false;
+            };
+            
+            btn.addEventListener('touchstart', startHandler, {passive: false});
+            btn.addEventListener('touchend', endHandler, {passive: false});
+            btn.addEventListener('touchcancel', endHandler, {passive: false});
+            btn.addEventListener('mousedown', startHandler);
+            btn.addEventListener('mouseup', endHandler);
+            btn.addEventListener('mouseleave', endHandler);
+        }
+        
+        setupTouchBtn(btnLeft, 'left');
+        setupTouchBtn(btnRight, 'right');
+        setupTouchBtn(btnThrust, 'thrust');
+        
+        // 射击按钮
+        const fireHandler = (e) => {
+            e.preventDefault();
+            if (!gameStarted) {
+                initGame();
+            } else {
+                fire();
+            }
+        };
+        btnFire.addEventListener('touchstart', fireHandler, {passive: false});
+        btnFire.addEventListener('mousedown', fireHandler);
+        
+        // 开始/重新开始按钮
+        document.getElementById('btnStart').addEventListener('click', initGame);
+        document.getElementById('btnStart').addEventListener('touchend', (e) => {
+            e.preventDefault();
+            initGame();
+        });
+        document.getElementById('btnRestart').addEventListener('click', initGame);
+        document.getElementById('btnRestart').addEventListener('touchend', (e) => {
+            e.preventDefault();
+            initGame();
+        });
+        
+        // 画布点击也可以开始游戏
+        canvas.addEventListener('click', () => {
+            if (!gameStarted) initGame();
+        });
+        canvas.addEventListener('touchstart', (e) => {
+            if (!gameStarted) {
+                e.preventDefault();
+                initGame();
+            }
+        }, {passive: false});
+        
+        // 防止页面滚动
+        document.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+        }, {passive: false});
+        
+        // 初始绘制
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    </script>
+</body>
+</html>
