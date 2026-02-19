@@ -52,8 +52,36 @@
       font-size: 1rem;
       cursor: pointer;
       -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      touch-action: manipulation;
+      min-width: 150px;
+      font-weight: bold;
     }
     .btn:active { background: #45a049; }
+    .start-overlay {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0,0,0,0.85);
+      padding: 30px 40px;
+      border-radius: 15px;
+      text-align: center;
+      border: 2px solid #4CAF50;
+    }
+    .start-overlay h2 {
+      color: #4CAF50;
+      margin-bottom: 15px;
+      font-size: 1.4rem;
+    }
+    .start-overlay p {
+      color: #aaa;
+      font-size: 0.85rem;
+      margin-bottom: 20px;
+    }
+    #gameContainer {
+      position: relative;
+    }
     .back-link { margin-top: 10px; color: #888; text-decoration: none; font-size: 0.9rem; }
     .mobile-hint {
       font-size: 0.75rem;
@@ -73,14 +101,20 @@
     <span>得分: <strong id="score">0</strong></span>
     <span>生命: <strong id="lives">3</strong></span>
   </div>
-  <canvas id="gameCanvas"></canvas>
+  <div id="gameContainer">
+    <canvas id="gameCanvas"></canvas>
+    <div id="startOverlay" class="start-overlay">
+      <h2>👾 太空侵略者</h2>
+      <p>👆 点击按钮开始游戏</p>
+      <button class="btn" id="btnStart">开始游戏</button>
+    </div>
+  </div>
   <div class="mobile-hint">💡 左右滑动移动，点击屏幕射击</div>
   <div class="controls">
     <button id="btnLeft">←</button>
     <button id="btnFire">射击</button>
     <button id="btnRight">→</button>
   </div>
-  <button class="btn" id="btnStart">开始游戏</button>
   <a href="index.html" class="back-link">← 返回游戏列表</a>
 
   <script>
@@ -111,6 +145,8 @@
         enemies = [], enemyBullets = [],
         score = 0, lives = 3, gameLoop = null, gameOver = false,
         enemyDir = 1, enemySpeed = 0.5, enemyDrop = false;
+    
+    let gameStarted = false;
     
     // 触摸控制
     let touchStartX = 0;
@@ -234,8 +270,15 @@
           document.getElementById('lives').textContent = lives;
           if (lives <= 0) {
             gameOver = true;
+            gameStarted = false;
             clearInterval(gameLoop);
-            setTimeout(() => alert(`游戏结束！得分: ${score}`), 100);
+            setTimeout(() => {
+              alert(`游戏结束！得分: ${score}`);
+              document.getElementById('startOverlay').style.display = 'block';
+              document.querySelector('#startOverlay h2').textContent = '游戏结束';
+              document.querySelector('#startOverlay p').textContent = `得分: ${score}`;
+              document.getElementById('btnStart').textContent = '重新开始';
+            }, 100);
           }
           return false;
         }
@@ -249,8 +292,15 @@
         if (e.x < 25 || e.x > canvas.width - 25) edgeHit = true;
         if (e.y > canvas.height - 80) {
           gameOver = true;
+          gameStarted = false;
           clearInterval(gameLoop);
-          setTimeout(() => alert(`游戏结束！敌人到达底部！得分: ${score}`), 100);
+          setTimeout(() => {
+            alert(`游戏结束！敌人到达底部！得分: ${score}`);
+            document.getElementById('startOverlay').style.display = 'block';
+            document.querySelector('#startOverlay h2').textContent = '游戏结束';
+            document.querySelector('#startOverlay p').textContent = `得分: ${score}`;
+            document.getElementById('btnStart').textContent = '重新开始';
+          }, 100);
         }
       });
       
@@ -297,6 +347,9 @@
     }
     
     function startGame() {
+      gameStarted = true;
+      document.getElementById('startOverlay').style.display = 'none';
+      
       if (gameLoop) clearInterval(gameLoop);
       initEnemies();
       player = { x: 200, bullets: [] };
@@ -319,16 +372,71 @@
       }
     });
     
-    // 按钮事件
-    document.getElementById('btnLeft').addEventListener('touchstart', (e) => { e.preventDefault(); movePlayer(-1); });
-    document.getElementById('btnRight').addEventListener('touchstart', (e) => { e.preventDefault(); movePlayer(1); });
-    document.getElementById('btnFire').addEventListener('touchstart', (e) => { e.preventDefault(); fire(); });
-    document.getElementById('btnStart').addEventListener('click', startGame);
+    // 按钮事件 - 同时支持触摸和鼠标
+    const btnStart = document.getElementById('btnStart');
+    const btnLeft = document.getElementById('btnLeft');
+    const btnRight = document.getElementById('btnRight');
+    const btnFire = document.getElementById('btnFire');
     
-    // 鼠标点击支持
-    document.getElementById('btnLeft').addEventListener('mousedown', () => movePlayer(-1));
-    document.getElementById('btnRight').addEventListener('mousedown', () => movePlayer(1));
-    document.getElementById('btnFire').addEventListener('mousedown', fire);
+    // 开始按钮
+    btnStart.addEventListener('click', startGame);
+    btnStart.addEventListener('touchend', (e) => { e.preventDefault(); startGame(); });
+    
+    // 方向按钮
+    btnLeft.addEventListener('touchstart', (e) => { e.preventDefault(); if(gameStarted) movePlayer(-1); });
+    btnLeft.addEventListener('mousedown', () => { if(gameStarted) movePlayer(-1); });
+    
+    btnRight.addEventListener('touchstart', (e) => { e.preventDefault(); if(gameStarted) movePlayer(1); });
+    btnRight.addEventListener('mousedown', () => { if(gameStarted) movePlayer(1); });
+    
+    // 射击按钮
+    btnFire.addEventListener('touchstart', (e) => { e.preventDefault(); if(gameStarted) fire(); });
+    btnFire.addEventListener('mousedown', () => { if(gameStarted) fire(); });
+    
+    // 画布触摸事件 - 只在游戏开始后生效
+    function handleTouchStart(e) {
+      if (!gameStarted) return;
+      e.preventDefault();
+      const touch = e.touches[0];
+      touchStartX = touch.clientX;
+      isTouching = true;
+    }
+    
+    function handleTouchMove(e) {
+      if (!gameStarted) return;
+      e.preventDefault();
+      if (!isTouching) return;
+      const touch = e.touches[0];
+      const deltaX = touch.clientX - touchStartX;
+      
+      if (Math.abs(deltaX) > 10) {
+        movePlayer(deltaX > 0 ? 1 : -1);
+        touchStartX = touch.clientX;
+      }
+    }
+    
+    function handleTouchEnd(e) {
+      if (!gameStarted) {
+        // 游戏未开始时，点击画布也可以开始游戏
+        e.preventDefault();
+        startGame();
+        return;
+      }
+      e.preventDefault();
+      isTouching = false;
+      
+      const now = Date.now();
+      if (now - lastTapTime < 300) {
+        fire();
+      }
+      lastTapTime = now;
+      
+      const touch = e.changedTouches[0];
+      const rect = canvas.getBoundingClientRect();
+      if (touch.clientY < rect.top + rect.height * 0.6) {
+        fire();
+      }
+    }
     
     initEnemies();
     draw();
