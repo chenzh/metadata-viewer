@@ -1,5 +1,8 @@
 import { Gamepad2, Github, Twitter, Heart } from 'lucide-react';
 
+// 声明构建时注入的全局变量
+declare const __GIT_COMMIT_TIME__: string;
+
 const footerLinks = {
   games: [
     { name: '动作游戏', href: '#games' },
@@ -30,17 +33,8 @@ export function Footer() {
     }
   };
 
-  // 获取当前日期时间
-  const now = new Date();
-  const updateTime = now.toLocaleString('zh-CN', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false,
-  });
+  // 使用构建时注入的 git 提交时间
+  const updateTime = typeof __GIT_COMMIT_TIME__ !== 'undefined' ? __GIT_COMMIT_TIME__ : '未知时间';
 
   return (
     <footer className="relative pt-20 pb-8 px-4 overflow-hidden">
