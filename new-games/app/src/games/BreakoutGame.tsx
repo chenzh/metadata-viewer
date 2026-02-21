@@ -199,7 +199,29 @@ export function BreakoutGame() {
           ref={canvasRef}
           width={CANVAS_WIDTH}
           height={CANVAS_HEIGHT}
-          className="border-2 border-white/20 rounded-lg max-w-full"
+          className="border-2 border-white/20 rounded-lg max-w-full touch-manipulation"
+          onTouchStart={(e) => {
+            e.preventDefault();
+            if (gameOver || won) return;
+            const touch = e.touches[0];
+            const rect = canvasRef.current?.getBoundingClientRect();
+            if (!rect) return;
+            const x = touch.clientX - rect.left;
+            const scaleX = CANVAS_WIDTH / rect.width;
+            const canvasX = x * scaleX;
+            gameStateRef.current.paddleX = Math.max(0, Math.min(CANVAS_WIDTH - PADDLE_WIDTH, canvasX - PADDLE_WIDTH / 2));
+          }}
+          onTouchMove={(e) => {
+            e.preventDefault();
+            if (gameOver || won) return;
+            const touch = e.touches[0];
+            const rect = canvasRef.current?.getBoundingClientRect();
+            if (!rect) return;
+            const x = touch.clientX - rect.left;
+            const scaleX = CANVAS_WIDTH / rect.width;
+            const canvasX = x * scaleX;
+            gameStateRef.current.paddleX = Math.max(0, Math.min(CANVAS_WIDTH - PADDLE_WIDTH, canvasX - PADDLE_WIDTH / 2));
+          }}
         />
         
         {gameOver && (
@@ -239,7 +261,7 @@ export function BreakoutGame() {
           onMouseDown={() => { gameStateRef.current.keys.left = true; }} 
           onMouseUp={() => { gameStateRef.current.keys.left = false; }}
           onMouseLeave={() => { gameStateRef.current.keys.left = false; }}
-          onTouchStart={() => { gameStateRef.current.keys.left = true; }}
+          onTouchStart={(e) => { e.preventDefault(); gameStateRef.current.keys.left = true; }}
           onTouchEnd={() => { gameStateRef.current.keys.left = false; }}
           variant="outline" 
           className="h-16 border-white/20 text-white text-2xl"
@@ -249,7 +271,7 @@ export function BreakoutGame() {
           onMouseDown={() => { gameStateRef.current.keys.right = true; }} 
           onMouseUp={() => { gameStateRef.current.keys.right = false; }}
           onMouseLeave={() => { gameStateRef.current.keys.right = false; }}
-          onTouchStart={() => { gameStateRef.current.keys.right = true; }}
+          onTouchStart={(e) => { e.preventDefault(); gameStateRef.current.keys.right = true; }}
           onTouchEnd={() => { gameStateRef.current.keys.right = false; }}
           variant="outline" 
           className="h-16 border-white/20 text-white text-2xl"

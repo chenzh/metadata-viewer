@@ -225,7 +225,35 @@ export function SpaceInvadersGame() {
           ref={canvasRef}
           width={CANVAS_WIDTH}
           height={CANVAS_HEIGHT}
-          className="border-2 border-white/20 rounded-lg max-w-full"
+          className="border-2 border-white/20 rounded-lg max-w-full touch-manipulation"
+          onTouchStart={(e) => {
+            e.preventDefault();
+            if (!started || gameOver) return;
+            const touch = e.touches[0];
+            const rect = canvasRef.current?.getBoundingClientRect();
+            if (!rect) return;
+            const x = touch.clientX - rect.left;
+            const scaleX = CANVAS_WIDTH / rect.width;
+            const canvasX = x * scaleX;
+            setPlayerX(Math.max(0, Math.min(CANVAS_WIDTH - PLAYER_WIDTH, canvasX - PLAYER_WIDTH / 2)));
+          }}
+          onTouchMove={(e) => {
+            e.preventDefault();
+            if (!started || gameOver) return;
+            const touch = e.touches[0];
+            const rect = canvasRef.current?.getBoundingClientRect();
+            if (!rect) return;
+            const x = touch.clientX - rect.left;
+            const scaleX = CANVAS_WIDTH / rect.width;
+            const canvasX = x * scaleX;
+            setPlayerX(Math.max(0, Math.min(CANVAS_WIDTH - PLAYER_WIDTH, canvasX - PLAYER_WIDTH / 2)));
+          }}
+          onTouchEnd={() => {
+            // Optional: auto shoot on touch end
+            if (started && !gameOver && bullets.length < 3) {
+              setBullets(prev => [...prev, { x: playerX + PLAYER_WIDTH / 2, y: CANVAS_HEIGHT - 40 }]);
+            }
+          }}
         />
         
         {!started && (
@@ -261,13 +289,15 @@ export function SpaceInvadersGame() {
           onMouseDown={() => { keysRef.current.left = true; }} 
           onMouseUp={() => { keysRef.current.left = false; }}
           onMouseLeave={() => { keysRef.current.left = false; }}
-          onTouchStart={() => { keysRef.current.left = true; }}
+          onTouchStart={(e) => { e.preventDefault(); keysRef.current.left = true; }}
           onTouchEnd={() => { keysRef.current.left = false; }}
           variant="outline" 
           className="h-16 border-white/20 text-white text-2xl"
           disabled={!started || gameOver}
         >←</Button>
         <Button 
+          onTouchStart={(e) => { e.preventDefault(); if (started && !gameOver) keysRef.current.space = true; }}
+          onTouchEnd={() => { keysRef.current.space = false; }}
           onClick={() => { if (started && !gameOver) keysRef.current.space = true; }}
           variant="outline" 
           className="h-16 border-white/20 text-white text-lg"
@@ -277,7 +307,7 @@ export function SpaceInvadersGame() {
           onMouseDown={() => { keysRef.current.right = true; }} 
           onMouseUp={() => { keysRef.current.right = false; }}
           onMouseLeave={() => { keysRef.current.right = false; }}
-          onTouchStart={() => { keysRef.current.right = true; }}
+          onTouchStart={(e) => { e.preventDefault(); keysRef.current.right = true; }}
           onTouchEnd={() => { keysRef.current.right = false; }}
           variant="outline" 
           className="h-16 border-white/20 text-white text-2xl"

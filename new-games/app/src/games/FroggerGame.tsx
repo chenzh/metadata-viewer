@@ -23,6 +23,9 @@ interface Log {
 
 export function FroggerGame() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const frogRef = useRef({ x: CANVAS_WIDTH / 2 - FROG_SIZE / 2, y: CANVAS_HEIGHT - FROG_SIZE - 10 });
+  const carsRef = useRef<Car[]>([]);
+  const logsRef = useRef<Log[]>([]);
   const [frog, setFrog] = useState({ x: CANVAS_WIDTH / 2 - FROG_SIZE / 2, y: CANVAS_HEIGHT - FROG_SIZE - 10 });
   const [cars, setCars] = useState<Car[]>([]);
   const [logs, setLogs] = useState<Log[]>([]);
@@ -62,12 +65,16 @@ export function FroggerGame() {
       }
     }
 
+    carsRef.current = newCars;
+    logsRef.current = newLogs;
     setCars(newCars);
     setLogs(newLogs);
   }, []);
 
   const resetGame = useCallback(() => {
-    setFrog({ x: CANVAS_WIDTH / 2 - FROG_SIZE / 2, y: CANVAS_HEIGHT - FROG_SIZE - 10 });
+    const initialFrog = { x: CANVAS_WIDTH / 2 - FROG_SIZE / 2, y: CANVAS_HEIGHT - FROG_SIZE - 10 };
+    frogRef.current = initialFrog;
+    setFrog(initialFrog);
     initGame();
     setGameOver(false);
     setIsPaused(false);
@@ -81,32 +88,35 @@ export function FroggerGame() {
       if (!started || gameOver || won || isPaused) return;
       
       const step = 40;
-      setFrog(f => {
-        let newX = f.x;
-        let newY = f.y;
-        
-        switch (e.key) {
-          case 'ArrowUp':
-            e.preventDefault();
-            newY = Math.max(0, f.y - step);
-            setScore(s => s + 10);
-            break;
-          case 'ArrowDown':
-            e.preventDefault();
-            newY = Math.min(CANVAS_HEIGHT - FROG_SIZE, f.y + step);
-            break;
-          case 'ArrowLeft':
-            e.preventDefault();
-            newX = Math.max(0, f.x - step);
-            break;
-          case 'ArrowRight':
-            e.preventDefault();
-            newX = Math.min(CANVAS_WIDTH - FROG_SIZE, f.x + step);
-            break;
-        }
-        
-        return { x: newX, y: newY };
-      });
+      const f = frogRef.current;
+      let newX = f.x;
+      let newY = f.y;
+      let scoreDelta = 0;
+      
+      switch (e.key) {
+        case 'ArrowUp':
+          e.preventDefault();
+          newY = Math.max(0, f.y - step);
+          scoreDelta = 10;
+          break;
+        case 'ArrowDown':
+          e.preventDefault();
+          newY = Math.min(CANVAS_HEIGHT - FROG_SIZE, f.y + step);
+          break;
+        case 'ArrowLeft':
+          e.preventDefault();
+          newX = Math.max(0, f.x - step);
+          break;
+        case 'ArrowRight':
+          e.preventDefault();
+          newX = Math.min(CANVAS_WIDTH - FROG_SIZE, f.x + step);
+          break;
+      }
+      
+      const newFrog = { x: newX, y: newY };
+      frogRef.current = newFrog;
+      setFrog(newFrog);
+      if (scoreDelta) setScore(s => s + scoreDelta);
 
       if (e.key === ' ') {
         e.preventDefault();
@@ -123,34 +133,40 @@ export function FroggerGame() {
 
     const interval = setInterval(() => {
       // Move cars
-      setCars(prev => prev.map(car => ({
+      carsRef.current = carsRef.current.map(car => ({
         ...car,
         x: (car.x + car.speed + CANVAS_WIDTH + 100) % (CANVAS_WIDTH + 100) - 50,
-      })));
+      }));
 
       // Move logs
-      setLogs(prev => prev.map(log => ({
+      logsRef.current = logsRef.current.map(log => ({
         ...log,
         x: (log.x + log.speed + CANVAS_WIDTH + 150) % (CANVAS_WIDTH + 150) - 75,
-      })));
+      }));
+
+      // Update state for rendering
+      setCars(carsRef.current);
+      setLogs(logsRef.current);
+
+      const currentFrog = frogRef.current;
 
       // Check car collision
-      cars.forEach(car => {
-        if (frog.x < car.x + car.width &&
-            frog.x + FROG_SIZE > car.x &&
-            frog.y < car.y + 30 &&
-            frog.y + FROG_SIZE > car.y) {
+      carsRef.current.forEach(car => {
+        if (currentFrog.x < car.x + car.width &&
+            currentFrog.x + FROG_SIZE > car.x &&
+            currentFrog.y < car.y + 30 &&
+            currentFrog.y + FROG_SIZE > car.y) {
           setGameOver(true);
         }
       });
 
       // Check river (must be on log)
-      if (frog.y >= 150 && frog.y <= 300) {
-        const onLog = logs.some(log =>
-          frog.x >= log.x &&
-          frog.x + FROG_SIZE <= log.x + log.width &&
-          frog.y >= log.y - 10 &&
-          frog.y <= log.y + 30
+      if (currentFrog.y >= 150 && currentFrog.y <= 300) {
+        const onLog = logsRef.current.some(log =>
+          currentFrog.x >= log.x &&
+          currentFrog.x + FROG_SIZE <= log.x + log.width &&
+          currentFrog.y >= log.y - 10 &&
+          currentFrog.y <= log.y + 30
         );
         if (!onLog) {
           setGameOver(true);
@@ -158,13 +174,13 @@ export function FroggerGame() {
       }
 
       // Check win
-      if (frog.y < 50) {
+      if (currentFrog.y < 50) {
         setWon(true);
       }
     }, 1000 / 60);
 
     return () => clearInterval(interval);
-  }, [started, gameOver, won, isPaused, frog, cars, logs]);
+  }, [started, gameOver, won, isPaused]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -289,9 +305,20 @@ export function FroggerGame() {
           onClick={() => { 
             if (!started || gameOver || won || isPaused) return;
             const step = 40;
-            setFrog(f => ({ ...f, y: Math.max(0, f.y - step) }));
+            const newFrog = { ...frogRef.current, y: Math.max(0, frogRef.current.y - step) };
+            frogRef.current = newFrog;
+            setFrog(newFrog);
             setScore(s => s + 10);
-          }} 
+          }}
+          onTouchStart={(e) => {
+            e.preventDefault();
+            if (!started || gameOver || won || isPaused) return;
+            const step = 40;
+            const newFrog = { ...frogRef.current, y: Math.max(0, frogRef.current.y - step) };
+            frogRef.current = newFrog;
+            setFrog(newFrog);
+            setScore(s => s + 10);
+          }}
           variant="outline" 
           className="border-white/20 text-white h-14 text-2xl"
           disabled={!started || gameOver || won}
@@ -301,14 +328,28 @@ export function FroggerGame() {
           onClick={() => { 
             if (!started || gameOver || won || isPaused) return;
             const step = 40;
-            setFrog(f => ({ ...f, x: Math.max(0, f.x - step) }));
-          }} 
+            const newFrog = { ...frogRef.current, x: Math.max(0, frogRef.current.x - step) };
+            frogRef.current = newFrog;
+            setFrog(newFrog);
+          }}
+          onTouchStart={(e) => {
+            e.preventDefault();
+            if (!started || gameOver || won || isPaused) return;
+            const step = 40;
+            const newFrog = { ...frogRef.current, x: Math.max(0, frogRef.current.x - step) };
+            frogRef.current = newFrog;
+            setFrog(newFrog);
+          }}
           variant="outline" 
           className="border-white/20 text-white h-14 text-2xl"
           disabled={!started || gameOver || won}
         >←</Button>
         <Button 
-          onClick={() => { if (started && !gameOver && !won) setIsPaused(p => !p); }} 
+          onClick={() => { if (started && !gameOver && !won) setIsPaused(p => !p); }}
+          onTouchStart={(e) => {
+            e.preventDefault();
+            if (started && !gameOver && !won) setIsPaused(p => !p);
+          }}
           variant="outline" 
           className="border-white/20 text-white h-14"
           disabled={!started || gameOver || won}
@@ -317,8 +358,18 @@ export function FroggerGame() {
           onClick={() => { 
             if (!started || gameOver || won || isPaused) return;
             const step = 40;
-            setFrog(f => ({ ...f, x: Math.min(CANVAS_WIDTH - FROG_SIZE, f.x + step) }));
-          }} 
+            const newFrog = { ...frogRef.current, x: Math.min(CANVAS_WIDTH - FROG_SIZE, frogRef.current.x + step) };
+            frogRef.current = newFrog;
+            setFrog(newFrog);
+          }}
+          onTouchStart={(e) => {
+            e.preventDefault();
+            if (!started || gameOver || won || isPaused) return;
+            const step = 40;
+            const newFrog = { ...frogRef.current, x: Math.min(CANVAS_WIDTH - FROG_SIZE, frogRef.current.x + step) };
+            frogRef.current = newFrog;
+            setFrog(newFrog);
+          }}
           variant="outline" 
           className="border-white/20 text-white h-14 text-2xl"
           disabled={!started || gameOver || won}
@@ -328,8 +379,18 @@ export function FroggerGame() {
           onClick={() => { 
             if (!started || gameOver || won || isPaused) return;
             const step = 40;
-            setFrog(f => ({ ...f, y: Math.min(CANVAS_HEIGHT - FROG_SIZE, f.y + step) }));
-          }} 
+            const newFrog = { ...frogRef.current, y: Math.min(CANVAS_HEIGHT - FROG_SIZE, frogRef.current.y + step) };
+            frogRef.current = newFrog;
+            setFrog(newFrog);
+          }}
+          onTouchStart={(e) => {
+            e.preventDefault();
+            if (!started || gameOver || won || isPaused) return;
+            const step = 40;
+            const newFrog = { ...frogRef.current, y: Math.min(CANVAS_HEIGHT - FROG_SIZE, frogRef.current.y + step) };
+            frogRef.current = newFrog;
+            setFrog(newFrog);
+          }}
           variant="outline" 
           className="border-white/20 text-white h-14 text-2xl"
           disabled={!started || gameOver || won}

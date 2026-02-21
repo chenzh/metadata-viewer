@@ -222,7 +222,29 @@ export function PongGame() {
           ref={canvasRef}
           width={CANVAS_WIDTH}
           height={CANVAS_HEIGHT}
-          className="border-2 border-white/20 rounded-lg max-w-full"
+          className="border-2 border-white/20 rounded-lg max-w-full touch-manipulation"
+          onTouchStart={(e) => {
+            e.preventDefault();
+            if (gameOver) return;
+            const touch = e.touches[0];
+            const rect = canvasRef.current?.getBoundingClientRect();
+            if (!rect) return;
+            const y = touch.clientY - rect.top;
+            const scaleY = CANVAS_HEIGHT / rect.height;
+            const canvasY = y * scaleY;
+            gameStateRef.current.playerY = Math.max(0, Math.min(CANVAS_HEIGHT - PADDLE_HEIGHT, canvasY - PADDLE_HEIGHT / 2));
+          }}
+          onTouchMove={(e) => {
+            e.preventDefault();
+            if (gameOver) return;
+            const touch = e.touches[0];
+            const rect = canvasRef.current?.getBoundingClientRect();
+            if (!rect) return;
+            const y = touch.clientY - rect.top;
+            const scaleY = CANVAS_HEIGHT / rect.height;
+            const canvasY = y * scaleY;
+            gameStateRef.current.playerY = Math.max(0, Math.min(CANVAS_HEIGHT - PADDLE_HEIGHT, canvasY - PADDLE_HEIGHT / 2));
+          }}
         />
         
         {gameOver && (
@@ -251,7 +273,7 @@ export function PongGame() {
           onMouseDown={() => { gameStateRef.current.keys.up = true; }} 
           onMouseUp={() => { gameStateRef.current.keys.up = false; }}
           onMouseLeave={() => { gameStateRef.current.keys.up = false; }}
-          onTouchStart={() => { gameStateRef.current.keys.up = true; }}
+          onTouchStart={(e) => { e.preventDefault(); gameStateRef.current.keys.up = true; }}
           onTouchEnd={() => { gameStateRef.current.keys.up = false; }}
           variant="outline" 
           className="h-16 border-white/20 text-white text-2xl"
@@ -261,7 +283,7 @@ export function PongGame() {
           onMouseDown={() => { gameStateRef.current.keys.down = true; }} 
           onMouseUp={() => { gameStateRef.current.keys.down = false; }}
           onMouseLeave={() => { gameStateRef.current.keys.down = false; }}
-          onTouchStart={() => { gameStateRef.current.keys.down = true; }}
+          onTouchStart={(e) => { e.preventDefault(); gameStateRef.current.keys.down = true; }}
           onTouchEnd={() => { gameStateRef.current.keys.down = false; }}
           variant="outline" 
           className="h-16 border-white/20 text-white text-2xl"

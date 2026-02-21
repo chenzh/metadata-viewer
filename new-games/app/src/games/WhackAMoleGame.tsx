@@ -112,6 +112,10 @@ export function WhackAMoleGame() {
           <button
             key={index}
             onClick={() => whackMole(index)}
+            onTouchStart={(e) => {
+              e.preventDefault();
+              whackMole(index);
+            }}
             className={`
               w-20 h-20 md:w-24 md:h-24 rounded-full relative overflow-hidden
               transition-all duration-100 transform

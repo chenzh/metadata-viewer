@@ -251,7 +251,44 @@ export function AsteroidsGame() {
           ref={canvasRef}
           width={CANVAS_WIDTH}
           height={CANVAS_HEIGHT}
-          className="border-2 border-white/20 rounded-lg max-w-full"
+          className="border-2 border-white/20 rounded-lg max-w-full touch-manipulation"
+          onTouchStart={(e) => {
+            e.preventDefault();
+            if (!started || gameOver) return;
+            // Touch on left side = left rotation, right side = right rotation
+            const touch = e.touches[0];
+            const rect = canvasRef.current?.getBoundingClientRect();
+            if (!rect) return;
+            const x = touch.clientX - rect.left;
+            const centerX = CANVAS_WIDTH / 2;
+            if (x < centerX) {
+              keysRef.current.left = true;
+              keysRef.current.right = false;
+            } else {
+              keysRef.current.right = true;
+              keysRef.current.left = false;
+            }
+          }}
+          onTouchEnd={() => {
+            keysRef.current.left = false;
+            keysRef.current.right = false;
+          }}
+          onTouchMove={(e) => {
+            e.preventDefault();
+            if (!started || gameOver) return;
+            const touch = e.touches[0];
+            const rect = canvasRef.current?.getBoundingClientRect();
+            if (!rect) return;
+            const x = touch.clientX - rect.left;
+            const centerX = CANVAS_WIDTH / 2;
+            if (x < centerX) {
+              keysRef.current.left = true;
+              keysRef.current.right = false;
+            } else {
+              keysRef.current.right = true;
+              keysRef.current.left = false;
+            }
+          }}
         />
         
         {!started && (
@@ -287,7 +324,7 @@ export function AsteroidsGame() {
           onMouseDown={() => { keysRef.current.left = true; }} 
           onMouseUp={() => { keysRef.current.left = false; }}
           onMouseLeave={() => { keysRef.current.left = false; }}
-          onTouchStart={() => { keysRef.current.left = true; }}
+          onTouchStart={(e) => { e.preventDefault(); keysRef.current.left = true; }}
           onTouchEnd={() => { keysRef.current.left = false; }}
           variant="outline" 
           className="h-16 border-white/20 text-white text-2xl"
@@ -297,7 +334,7 @@ export function AsteroidsGame() {
           onMouseDown={() => { keysRef.current.up = true; }} 
           onMouseUp={() => { keysRef.current.up = false; }}
           onMouseLeave={() => { keysRef.current.up = false; }}
-          onTouchStart={() => { keysRef.current.up = true; }}
+          onTouchStart={(e) => { e.preventDefault(); keysRef.current.up = true; }}
           onTouchEnd={() => { keysRef.current.up = false; }}
           variant="outline" 
           className="h-16 border-white/20 text-white text-2xl"
@@ -307,7 +344,7 @@ export function AsteroidsGame() {
           onMouseDown={() => { keysRef.current.right = true; }} 
           onMouseUp={() => { keysRef.current.right = false; }}
           onMouseLeave={() => { keysRef.current.right = false; }}
-          onTouchStart={() => { keysRef.current.right = true; }}
+          onTouchStart={(e) => { e.preventDefault(); keysRef.current.right = true; }}
           onTouchEnd={() => { keysRef.current.right = false; }}
           variant="outline" 
           className="h-16 border-white/20 text-white text-2xl"
@@ -315,6 +352,8 @@ export function AsteroidsGame() {
         >↻</Button>
         <div />
         <Button 
+          onTouchStart={(e) => { e.preventDefault(); if (started && !gameOver) keysRef.current.space = true; }}
+          onTouchEnd={() => { keysRef.current.space = false; }}
           onClick={() => { if (started && !gameOver) keysRef.current.space = true; }}
           variant="outline" 
           className="h-16 border-white/20 text-white text-lg"

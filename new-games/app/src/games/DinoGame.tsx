@@ -20,8 +20,17 @@ export function DinoGame() {
   const [started, setStarted] = useState(false);
   const frameRef = useRef(0);
 
+  // Use ref to store dino position for collision detection without re-creating interval
+  const dinoRef = useRef({ y: GROUND_Y - DINO_SIZE, velocity: 0, isJumping: false });
+
+  // Keep ref in sync with state
+  useEffect(() => {
+    dinoRef.current = dino;
+  }, [dino]);
+
   const resetGame = useCallback(() => {
     setDino({ y: GROUND_Y - DINO_SIZE, velocity: 0, isJumping: false });
+    dinoRef.current = { y: GROUND_Y - DINO_SIZE, velocity: 0, isJumping: false };
     setObstacles([]);
     setGameOver(false);
     setIsPaused(false);
@@ -104,13 +113,14 @@ export function DinoGame() {
         });
       }
 
-      // Check collisions
+      // Check collisions - use ref to avoid dependency on dino state
       setObstacles(current => {
         current.forEach(o => {
+          const dinoY = dinoRef.current.y;
           const dinoLeft = 50;
           const dinoRight = 50 + DINO_SIZE - 10;
-          const dinoTop = dino.y + 5;
-          const dinoBottom = dino.y + DINO_SIZE;
+          const dinoTop = dinoY + 5;
+          const dinoBottom = dinoY + DINO_SIZE;
 
           const obsLeft = o.x;
           const obsRight = o.x + 25;
@@ -127,7 +137,7 @@ export function DinoGame() {
     }, 1000 / 60);
 
     return () => clearInterval(interval);
-  }, [gameOver, isPaused, started, dino.y]);
+  }, [gameOver, isPaused, started]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -200,8 +210,12 @@ export function DinoGame() {
           ref={canvasRef}
           width={CANVAS_WIDTH}
           height={CANVAS_HEIGHT}
-          className="border-2 border-white/20 rounded-lg max-w-full cursor-pointer"
+          className="border-2 border-white/20 rounded-lg max-w-full cursor-pointer touch-manipulation"
           onClick={jump}
+          onTouchStart={(e) => {
+            e.preventDefault();
+            jump();
+          }}
         />
         
         {!started && !gameOver && (

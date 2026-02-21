@@ -252,7 +252,29 @@ export function BubbleGame() {
           ref={canvasRef}
           width={CANVAS_WIDTH}
           height={CANVAS_HEIGHT}
-          className="border-2 border-white/20 rounded-lg max-w-full"
+          className="border-2 border-white/20 rounded-lg max-w-full touch-manipulation"
+          onTouchStart={(e) => {
+            e.preventDefault();
+            if (!started || gameOver || isPaused) return;
+            const touch = e.touches[0];
+            const rect = canvasRef.current?.getBoundingClientRect();
+            if (!rect) return;
+            const x = touch.clientX - rect.left;
+            const centerX = CANVAS_WIDTH / 2;
+            const targetAngle = Math.atan2(touch.clientY - rect.top - (CANVAS_HEIGHT - 40), x - centerX);
+            const clampedAngle = Math.max(-Math.PI + 0.2, Math.min(-0.2, targetAngle));
+            setCurrentBubble(b => ({ ...b, angle: clampedAngle }));
+            // Auto shoot on touch
+            if (!projectileRef.current) {
+              projectileRef.current = {
+                x: CANVAS_WIDTH / 2,
+                y: CANVAS_HEIGHT - 40,
+                vx: Math.cos(clampedAngle) * 8,
+                vy: Math.sin(clampedAngle) * 8,
+                active: true,
+              };
+            }
+          }}
         />
         
         {!started && (
@@ -295,6 +317,61 @@ export function BubbleGame() {
             <RotateCcw className="w-4 h-4" />
           </Button>
         )}
+      </div>
+
+      {/* Mobile Controls */}
+      <div className="grid grid-cols-3 gap-2 md:hidden w-full max-w-xs">
+        <Button 
+          onTouchStart={() => { 
+            setCurrentBubble(b => ({ ...b, angle: Math.max(-Math.PI + 0.2, b.angle - 0.15) }));
+          }}
+          onClick={() => { 
+            setCurrentBubble(b => ({ ...b, angle: Math.max(-Math.PI + 0.2, b.angle - 0.15) }));
+          }}
+          variant="outline" 
+          className="h-16 border-white/20 text-white text-2xl"
+          disabled={!started || gameOver || isPaused}
+        >←</Button>
+        <Button 
+          onTouchStart={() => {
+            if (!started || gameOver || isPaused) return;
+            if (!projectileRef.current) {
+              projectileRef.current = {
+                x: CANVAS_WIDTH / 2,
+                y: CANVAS_HEIGHT - 40,
+                vx: Math.cos(currentBubble.angle) * 8,
+                vy: Math.sin(currentBubble.angle) * 8,
+                active: true,
+              };
+            }
+          }}
+          onClick={() => {
+            if (!started || gameOver || isPaused) return;
+            if (!projectileRef.current) {
+              projectileRef.current = {
+                x: CANVAS_WIDTH / 2,
+                y: CANVAS_HEIGHT - 40,
+                vx: Math.cos(currentBubble.angle) * 8,
+                vy: Math.sin(currentBubble.angle) * 8,
+                active: true,
+              };
+            }
+          }}
+          variant="outline" 
+          className="h-16 border-white/20 text-white text-lg bg-gradient-to-r from-[#FF3A7A] to-[#A42EFF]"
+          disabled={!started || gameOver || isPaused}
+        >发射</Button>
+        <Button 
+          onTouchStart={() => { 
+            setCurrentBubble(b => ({ ...b, angle: Math.min(-0.2, b.angle + 0.15) }));
+          }}
+          onClick={() => { 
+            setCurrentBubble(b => ({ ...b, angle: Math.min(-0.2, b.angle + 0.15) }));
+          }}
+          variant="outline" 
+          className="h-16 border-white/20 text-white text-2xl"
+          disabled={!started || gameOver || isPaused}
+        >→</Button>
       </div>
 
       <div className="text-white/40 text-sm text-center">

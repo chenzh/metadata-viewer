@@ -19,9 +19,18 @@ export function FlappyGame() {
   const [score, setScore] = useState(0);
   const [highScore, setHighScore] = useState(0);
   const [started, setStarted] = useState(false);
+      
+  // Use ref to store bird position for collision detection without re-creating interval
+  const birdRef = useRef({ y: CANVAS_HEIGHT / 2, velocity: 0 });
+
+  // Keep ref in sync with state
+  useEffect(() => {
+    birdRef.current = bird;
+  }, [bird]);
 
   const resetGame = useCallback(() => {
     setBird({ y: CANVAS_HEIGHT / 2, velocity: 0 });
+    birdRef.current = { y: CANVAS_HEIGHT / 2, velocity: 0 };
     setPipes([]);
     setGameOver(false);
     setIsPaused(false);
@@ -83,13 +92,14 @@ export function FlappyGame() {
         return newPipes;
       });
 
-      // Check collisions and score
+      // Check collisions and score - use ref to avoid dependency on bird state
       setPipes(currentPipes => {
         currentPipes.forEach(pipe => {
+          const birdY = birdRef.current.y;
           const birdLeft = 80;
           const birdRight = 80 + BIRD_SIZE;
-          const birdTop = bird.y;
-          const birdBottom = bird.y + BIRD_SIZE;
+          const birdTop = birdY;
+          const birdBottom = birdY + BIRD_SIZE;
           
           const pipeLeft = pipe.x;
           const pipeRight = pipe.x + PIPE_WIDTH;
@@ -117,7 +127,7 @@ export function FlappyGame() {
     }, 1000 / 60);
 
     return () => clearInterval(interval);
-  }, [gameOver, isPaused, started, bird.y]);
+  }, [gameOver, isPaused, started]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -213,8 +223,12 @@ export function FlappyGame() {
           ref={canvasRef}
           width={CANVAS_WIDTH}
           height={CANVAS_HEIGHT}
-          className="border-2 border-white/20 rounded-lg max-w-full cursor-pointer"
+          className="border-2 border-white/20 rounded-lg max-w-full cursor-pointer touch-manipulation"
           onClick={jump}
+          onTouchStart={(e) => {
+            e.preventDefault();
+            jump();
+          }}
         />
         
         {!started && !gameOver && (

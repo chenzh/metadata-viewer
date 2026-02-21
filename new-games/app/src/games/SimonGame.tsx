@@ -110,6 +110,10 @@ export function SimonGame() {
             <button
               key={id}
               onClick={() => handleButtonClick(id)}
+              onTouchStart={(e) => {
+                e.preventDefault();
+                handleButtonClick(id);
+              }}
               disabled={!isPlayerTurn || gameOver}
               className="rounded-2xl transition-all duration-150 transform active:scale-95"
               style={{

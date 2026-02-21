@@ -36,6 +36,31 @@ export function KnifeThrowGame() {
     setLevel(l => l + 1);
   }, [level]);
 
+  const throwKnife = useCallback(() => {
+    if (!started || gameOver || isPaused) return;
+    const knifeAngle = targetAngle % (Math.PI * 2);
+    
+    for (const existingAngle of knives) {
+      const diff = Math.abs(knifeAngle - existingAngle);
+      const normalizedDiff = Math.min(diff, Math.PI * 2 - diff);
+      if (normalizedDiff < 0.15) {
+        setGameOver(true);
+        return;
+      }
+    }
+    
+    setKnives(prev => [...prev, knifeAngle]);
+    setRemainingKnives(k => {
+      const newK = k - 1;
+      if (newK === 0) {
+        setScore(s => s + 100);
+        setTimeout(nextLevel, 500);
+      }
+      return newK;
+    });
+    setScore(s => s + 10);
+  }, [started, gameOver, isPaused, targetAngle, knives, nextLevel]);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!started || gameOver) return;
@@ -180,7 +205,7 @@ export function KnifeThrowGame() {
           ref={canvasRef}
           width={CANVAS_WIDTH}
           height={CANVAS_HEIGHT}
-          className="border-2 border-white/20 rounded-lg max-w-full cursor-pointer"
+          className="border-2 border-white/20 rounded-lg max-w-full cursor-pointer touch-manipulation"
           onClick={() => {
             if (started && !gameOver && !isPaused) {
               const knifeAngle = targetAngle % (Math.PI * 2);
@@ -205,6 +230,31 @@ export function KnifeThrowGame() {
               });
               setScore(s => s + 10);
             }
+          }}
+          onTouchStart={(e) => {
+            e.preventDefault();
+            if (!started || gameOver || isPaused) return;
+            const knifeAngle = targetAngle % (Math.PI * 2);
+            
+            for (const existingAngle of knives) {
+              const diff = Math.abs(knifeAngle - existingAngle);
+              const normalizedDiff = Math.min(diff, Math.PI * 2 - diff);
+              if (normalizedDiff < 0.15) {
+                setGameOver(true);
+                return;
+              }
+            }
+            
+            setKnives(prev => [...prev, knifeAngle]);
+            setRemainingKnives(k => {
+              const newK = k - 1;
+              if (newK === 0) {
+                setScore(s => s + 100);
+                setTimeout(nextLevel, 500);
+              }
+              return newK;
+            });
+            setScore(s => s + 10);
           }}
         />
         
@@ -248,6 +298,17 @@ export function KnifeThrowGame() {
             <RotateCcw className="w-4 h-4" />
           </Button>
         )}
+      </div>
+
+      {/* Mobile Controls */}
+      <div className="md:hidden w-full max-w-xs">
+        <Button 
+          onTouchStart={(e) => { e.preventDefault(); throwKnife(); }}
+          onClick={throwKnife}
+          variant="outline" 
+          className="h-16 w-full border-white/20 text-white text-lg bg-gradient-to-r from-[#FF3A7A] to-[#A42EFF]"
+          disabled={!started || gameOver}
+        >🎯 发射</Button>
       </div>
 
       <div className="text-white/40 text-sm text-center">

@@ -157,6 +157,9 @@ export function Footer() {
           <p className="text-white/40 text-sm">
             © 2025 No WiFi Games. 保留所有权利。
           </p>
+          <p className="text-white/40 text-sm">
+            网站更新日期：2025年2月20日 23:14:00
+          </p>
           <p className="text-white/40 text-sm flex items-center gap-1">
             用 <Heart className="w-4 h-4 text-[#FF3A7A]" /> 制作
           </p>

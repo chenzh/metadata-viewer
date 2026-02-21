@@ -160,7 +160,22 @@ export function ColorJumpGame() {
           ref={canvasRef}
           width={CANVAS_WIDTH}
           height={CANVAS_HEIGHT}
-          className="border-2 border-white/20 rounded-lg max-w-full"
+          className="border-2 border-white/20 rounded-lg max-w-full touch-manipulation"
+          onTouchStart={(e) => {
+            e.preventDefault();
+            if (!started || gameOver) return;
+            const touch = e.touches[0];
+            const rect = canvasRef.current?.getBoundingClientRect();
+            if (!rect) return;
+            const x = touch.clientX - rect.left;
+            const scaleX = CANVAS_WIDTH / rect.width;
+            const canvasX = x * scaleX;
+            if (canvasX < CANVAS_WIDTH / 2) {
+              setBall(b => ({ ...b, x: Math.max(BALL_SIZE, b.x - 25) }));
+            } else {
+              setBall(b => ({ ...b, x: Math.min(CANVAS_WIDTH - BALL_SIZE, b.x + 25) }));
+            }
+          }}
         />
         
         {!started && (
@@ -196,14 +211,14 @@ export function ColorJumpGame() {
       <div className="grid grid-cols-2 gap-2 md:hidden w-full max-w-xs">
         <Button 
           onMouseDown={() => { setBall(b => ({ ...b, x: Math.max(BALL_SIZE, b.x - 15) })); }} 
-          onTouchStart={() => { setBall(b => ({ ...b, x: Math.max(BALL_SIZE, b.x - 15) })); }}
+          onTouchStart={(e) => { e.preventDefault(); setBall(b => ({ ...b, x: Math.max(BALL_SIZE, b.x - 15) })); }}
           variant="outline" 
           className="h-16 border-white/20 text-white text-2xl"
           disabled={!started || gameOver}
         >←</Button>
         <Button 
           onMouseDown={() => { setBall(b => ({ ...b, x: Math.min(CANVAS_WIDTH - BALL_SIZE, b.x + 15) })); }} 
-          onTouchStart={() => { setBall(b => ({ ...b, x: Math.min(CANVAS_WIDTH - BALL_SIZE, b.x + 15) })); }}
+          onTouchStart={(e) => { e.preventDefault(); setBall(b => ({ ...b, x: Math.min(CANVAS_WIDTH - BALL_SIZE, b.x + 15) })); }}
           variant="outline" 
           className="h-16 border-white/20 text-white text-2xl"
           disabled={!started || gameOver}

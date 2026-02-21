@@ -9,6 +9,9 @@ const PATH_WIDTH = 80;
 
 export function ZigzagGame() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const ballRef = useRef({ x: CANVAS_WIDTH / 2, y: 100 });
+  const pathRef = useRef<{ x: number; y: number; direction: number }[]>([]);
+  const ballDirectionRef = useRef(1);
   const [ball, setBall] = useState({ x: CANVAS_WIDTH / 2, y: 100 });
   const [path, setPath] = useState<{ x: number; y: number; direction: number }[]>([]);
   const [score, setScore] = useState(0);
@@ -30,8 +33,12 @@ export function ZigzagGame() {
       }
     }
     
+    const initialBall = { x: CANVAS_WIDTH / 2, y: 100 };
+    ballRef.current = initialBall;
+    pathRef.current = newPath;
+    ballDirectionRef.current = 1;
     setPath(newPath);
-    setBall({ x: CANVAS_WIDTH / 2, y: 100 });
+    setBall(initialBall);
     setScore(0);
     setGameOver(false);
     setIsPaused(false);
@@ -48,6 +55,7 @@ export function ZigzagGame() {
         if (isPaused) {
           setIsPaused(false);
         } else {
+          ballDirectionRef.current = -ballDirectionRef.current;
           setBallDirection(d => -d);
         }
       }
@@ -156,8 +164,12 @@ export function ZigzagGame() {
           ref={canvasRef}
           width={CANVAS_WIDTH}
           height={CANVAS_HEIGHT}
-          className="border-2 border-white/20 rounded-lg max-w-full cursor-pointer"
+          className="border-2 border-white/20 rounded-lg max-w-full cursor-pointer touch-manipulation"
           onClick={() => setBallDirection(d => -d)}
+          onTouchStart={(e) => {
+            e.preventDefault();
+            setBallDirection(d => -d);
+          }}
         />
         
         {!started && (
