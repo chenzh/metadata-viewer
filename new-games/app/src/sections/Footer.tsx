@@ -30,6 +30,18 @@ export function Footer() {
     }
   };
 
+  // 获取当前日期时间
+  const now = new Date();
+  const updateTime = now.toLocaleString('zh-CN', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  });
+
   return (
     <footer className="relative pt-20 pb-8 px-4 overflow-hidden">
       {/* Wave Background */}
@@ -158,7 +170,7 @@ export function Footer() {
             © 2025 No WiFi Games. 保留所有权利。
           </p>
           <p className="text-white/40 text-sm">
-            网站更新日期：2025年2月20日 23:14:00
+            网站更新日期：{updateTime}
           </p>
           <p className="text-white/40 text-sm flex items-center gap-1">
             用 <Heart className="w-4 h-4 text-[#FF3A7A]" /> 制作
