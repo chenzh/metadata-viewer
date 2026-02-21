@@ -73,3 +73,16 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Prevent long-press context menu on game controls and canvas */
+.game-button,
+canvas,
+button[class*="md:hidden"] {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  touch-action: manipulation;
+}

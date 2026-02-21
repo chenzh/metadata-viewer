@@ -251,7 +251,7 @@ export function AsteroidsGame() {
           ref={canvasRef}
           width={CANVAS_WIDTH}
           height={CANVAS_HEIGHT}
-          className="border-2 border-white/20 rounded-lg max-w-full touch-manipulation"
+          className="border-2 border-white/20 rounded-lg max-w-full touch-manipulation select-none"
           onTouchStart={(e) => {
             e.preventDefault();
             if (!started || gameOver) return;
@@ -327,7 +327,7 @@ export function AsteroidsGame() {
           onTouchStart={(e) => { e.preventDefault(); keysRef.current.left = true; }}
           onTouchEnd={() => { keysRef.current.left = false; }}
           variant="outline" 
-          className="h-16 border-white/20 text-white text-2xl"
+          className="h-16 border-white/20 text-white text-2xl select-none"
           disabled={!started || gameOver}
         >↺</Button>
         <Button 
@@ -337,7 +337,7 @@ export function AsteroidsGame() {
           onTouchStart={(e) => { e.preventDefault(); keysRef.current.up = true; }}
           onTouchEnd={() => { keysRef.current.up = false; }}
           variant="outline" 
-          className="h-16 border-white/20 text-white text-2xl"
+          className="h-16 border-white/20 text-white text-2xl select-none"
           disabled={!started || gameOver}
         >↑</Button>
         <Button 
@@ -347,7 +347,7 @@ export function AsteroidsGame() {
           onTouchStart={(e) => { e.preventDefault(); keysRef.current.right = true; }}
           onTouchEnd={() => { keysRef.current.right = false; }}
           variant="outline" 
-          className="h-16 border-white/20 text-white text-2xl"
+          className="h-16 border-white/20 text-white text-2xl select-none"
           disabled={!started || gameOver}
         >↻</Button>
         <div />
@@ -356,18 +356,18 @@ export function AsteroidsGame() {
           onTouchEnd={() => { keysRef.current.space = false; }}
           onClick={() => { if (started && !gameOver) keysRef.current.space = true; }}
           variant="outline" 
-          className="h-16 border-white/20 text-white text-lg"
+          className="h-16 border-white/20 text-white text-lg select-none"
           disabled={!started || gameOver}
         >🔥</Button>
         <div />
       </div>
 
       <div className="flex gap-2 md:hidden">
-        <Button onClick={() => setIsPaused(!isPaused)} variant="outline" size="sm" className="flex-1">
+        <Button onClick={() => setIsPaused(!isPaused)} variant="outline" size="sm" className="flex-1 select-none">
           {isPaused ? <Play className="w-4 h-4 mr-2" /> : <Pause className="w-4 h-4 mr-2" />}
           {isPaused ? '继续' : '暂停'}
         </Button>
-        <Button onClick={resetGame} variant="outline" size="sm" className="flex-1">
+        <Button onClick={resetGame} variant="outline" size="sm" className="flex-1 select-none">
           <RotateCcw className="w-4 h-4 mr-2" />
           重置
         </Button>

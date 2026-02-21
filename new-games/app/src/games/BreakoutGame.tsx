@@ -199,7 +199,7 @@ export function BreakoutGame() {
           ref={canvasRef}
           width={CANVAS_WIDTH}
           height={CANVAS_HEIGHT}
-          className="border-2 border-white/20 rounded-lg max-w-full touch-manipulation"
+          className="border-2 border-white/20 rounded-lg max-w-full touch-manipulation select-none"
           onTouchStart={(e) => {
             e.preventDefault();
             if (gameOver || won) return;
@@ -264,7 +264,7 @@ export function BreakoutGame() {
           onTouchStart={(e) => { e.preventDefault(); gameStateRef.current.keys.left = true; }}
           onTouchEnd={() => { gameStateRef.current.keys.left = false; }}
           variant="outline" 
-          className="h-16 border-white/20 text-white text-2xl"
+          className="h-16 border-white/20 text-white text-2xl select-none"
           disabled={gameOver || won}
         >←</Button>
         <Button 
@@ -274,17 +274,17 @@ export function BreakoutGame() {
           onTouchStart={(e) => { e.preventDefault(); gameStateRef.current.keys.right = true; }}
           onTouchEnd={() => { gameStateRef.current.keys.right = false; }}
           variant="outline" 
-          className="h-16 border-white/20 text-white text-2xl"
+          className="h-16 border-white/20 text-white text-2xl select-none"
           disabled={gameOver || won}
         >→</Button>
       </div>
 
       <div className="flex gap-2 md:hidden">
-        <Button onClick={() => setIsPaused(!isPaused)} variant="outline" size="sm" className="flex-1">
+        <Button onClick={() => setIsPaused(!isPaused)} variant="outline" size="sm" className="flex-1 select-none">
           {isPaused ? <Play className="w-4 h-4 mr-2" /> : <Pause className="w-4 h-4 mr-2" />}
           {isPaused ? '继续' : '暂停'}
         </Button>
-        <Button onClick={resetGame} variant="outline" size="sm" className="flex-1">
+        <Button onClick={resetGame} variant="outline" size="sm" className="flex-1 select-none">
           <RotateCcw className="w-4 h-4 mr-2" />
           重置
         </Button>
